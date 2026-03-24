@@ -40,27 +40,25 @@ import mapRenderer, {MapRenderer} from './render/MapRenderer.js';
                 mapRenderer.setMap(map);
                 mapRenderer.cameraX = map.width / 2;
                 mapRenderer.cameraY = map.height / 2;
-                    mapRenderer.cameraPanner.panCamera(mapRenderer.map.width - 1, mapRenderer.map.height - 1, 500);
+                mapRenderer.setMap(assetCache.getMapById('test_level'));
+                //mapRenderer.cameraPanner.panCamera(mapRenderer.map.width - 1, mapRenderer.map.height - 1, 500);
 
-                    mapRenderer.setMap(assetCache.getMapById('test_level'));
-
-
-                setTimeout(() => {
-                    mapRenderer.cameraPanner.panCamera(mapRenderer.map.width / 2, mapRenderer.map.height / 2, 2500);
-                }, 2500);
-
-                setTimeout(() => {
-                    mapRenderer.setMap(assetCache.getMapById('test_map_2'));
-                }, 2500);
+                //setTimeout(() => {
+                //    mapRenderer.cameraPanner.panCamera(mapRenderer.map.width / 2, mapRenderer.map.height / 2, 2500);
+                //}, 2500);
+                //
+                //setTimeout(() => {
+                //    mapRenderer.setMap(assetCache.getMapById('test_map_2'));
+                //}, 2500);
 
             
 
-                setTimeout(() => {
-                    setInterval(() => {
-                        mapRenderer.cameraX = Math.random() * 10;
-                        mapRenderer.cameraY = Math.random() * 10;
-                    }, 20);
-                }, 10000)
+                //setTimeout(() => {
+                //    setInterval(() => {
+                //        mapRenderer.cameraX = Math.random() * 10;
+                //        mapRenderer.cameraY = Math.random() * 10;
+                //    }, 20);
+                //}, 10000)
 
         }
     }
