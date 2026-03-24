@@ -8,11 +8,20 @@ import mapRenderer, {MapRenderer} from './render/MapRenderer.js';
 
     await assetCache.initialize();
 
+    const renderLoop = (timeMs) => {
+        mapRenderer.render(timeMs);
+        requestAnimationFrame(renderLoop);
+    }
+
+    requestAnimationFrame(renderLoop);
+
     const socket = new WebSocket("ws://127.0.0.1:8080/ws/listener");
 
     socket.onopen = (evt) => {
         socket.send(`login User<${crypto.randomUUID()}> password`)
     }
+
+
 
     socket.onmessage = (evt) => {
 
@@ -25,26 +34,33 @@ import mapRenderer, {MapRenderer} from './render/MapRenderer.js';
 
         const label = splits[0];
         if(label === 'loadmap') {
-            const map = assetCache.getMapById(splits[1]);
 
-            
-            setTimeout(() => {
-                mapRenderer.map = map;
+                        const map = assetCache.getMapById(splits[1]);
+
+                mapRenderer.setMap(map);
                 mapRenderer.cameraX = map.width / 2;
                 mapRenderer.cameraY = map.height / 2;
+                    mapRenderer.cameraPanner.panCamera(mapRenderer.map.width - 1, mapRenderer.map.height - 1, 500);
+
+                    mapRenderer.setMap(assetCache.getMapById('test_level'));
+
 
                 setTimeout(() => {
-                    mapRenderer.cameraPanner.panCamera(mapRenderer.map.width - 1, mapRenderer.map.height - 1, 2500);
-                }, 2000);
-
-                setTimeout(() => {
-                    mapRenderer.map = assetCache.getMapById('test_map_2');
+                    mapRenderer.cameraPanner.panCamera(mapRenderer.map.width / 2, mapRenderer.map.height / 2, 2500);
                 }, 2500);
 
-            }, 1000);
+                setTimeout(() => {
+                    mapRenderer.setMap(assetCache.getMapById('test_map_2'));
+                }, 2500);
 
             
 
+                setTimeout(() => {
+                    setInterval(() => {
+                        mapRenderer.cameraX = Math.random() * 10;
+                        mapRenderer.cameraY = Math.random() * 10;
+                    }, 20);
+                }, 10000)
 
         }
     }

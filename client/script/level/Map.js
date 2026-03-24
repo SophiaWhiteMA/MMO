@@ -189,6 +189,14 @@ class Map {
         return property?.value;
     }
 
+    get minimumForegroundLayer(){
+        const property = this.#properties.find(e => e.name === 'minimumForegroundLayer');
+        if(property)
+            return property.value;
+        else
+            return null;
+    }
+
     get tileWidth(){
         return this.#tileWidth;
     }

@@ -7,11 +7,11 @@
     ],
     "fileStates": {
         "maps/test-map-2.tmj": {
-            "scale": 0.8275390625,
+            "scale": 1.5,
             "selectedLayer": 0,
             "viewCenter": {
-                "x": 511.7583195657304,
-                "y": 512.3625206514043
+                "x": 683.6666666666667,
+                "y": 770.6666666666665
             }
         },
         "maps/test-map.tmj": {
@@ -37,11 +37,11 @@
         "maps/test-map-2.tmj"
     ],
     "project": "mmo.tiled-project",
-    "property.type": "string",
+    "property.type": "int",
     "recentFiles": [
-        "tilesets/sprite_sheet.tsj",
         "maps/test-map.tmj",
-        "maps/test-map-2.tmj"
+        "maps/test-map-2.tmj",
+        "tilesets/sprite_sheet.tsj"
     ],
     "tileset.lastUsedFormat": "json"
 }
