@@ -1,6 +1,7 @@
 import { combinePaths } from "../util/index.js";
 import MapLayer from "./MapLayer.js";
 import Property from "./Property.js";
+import Tile from "./Tile.js";
 import TileSet from "./TileSet.js";
 
 const PRIVATE_KEY = Symbol('PrivateConstructorKey');
@@ -18,20 +19,29 @@ class Map {
     #type;
     #version;
 
+    /** @type {number} */
     #nextLayerId;
+
+    /** @type {number} */
     #nextObjectId;
 
+    /** @type {string} */
     #orientation;
 
+    /** @type {string} */
     #renderOrder;
+
+    /** @type {string} */
     #tiledVersion;
 
+    /** @type {Array<Property>} */
     #properties = [];
-    /** @type {MapLayer[]} */
-    #layers = [];
-    #tileSets = {};
 
-    #tilesCache;
+    /** @type {Array<MapLayer>} */
+    #layers = [];
+
+    /** @type {Map<number, TileSet>} key is firstGid */
+    #tileSets = {};
 
     constructor(key){
         if (key != PRIVATE_KEY)
@@ -59,8 +69,6 @@ class Map {
         output.#version = mapJson.version;
         output.#fileUrl = url;
 
-        output.#tilesCache = {};
-
         if(mapJson.properties?.length > 0)
             output.#properties = mapJson.properties.map(e => new Property(e.name, e.type, e.value))
 
@@ -68,6 +76,8 @@ class Map {
         for(const e of mapJson.tilesets) {
             const tileSetUrl = combinePaths(output.#fileUrl, e.source);
             const tileSet = await TileSet.fromUrl(tileSetUrl);
+            tileSet.spriteSheet.spriteWidth = output.#tileWidth;
+            tileSet.spriteSheet.spriteHeight = output.#tileHeight;
             tileSet.source = e.source;
             output.#tileSets[e.firstgid] = tileSet;
         }
@@ -91,7 +101,8 @@ class Map {
     /**
      * 
      * @param {number} mapTileId 
-     * @returns {obj | null}
+     * 
+     * @returns {{firstGid: number, tileSet: TileSet}}
      */
     getTileSetFromTileId = (mapTileId) => {
 
@@ -103,36 +114,32 @@ class Map {
                 return {firstGid: firstGid, tileSet: this.#tileSets[firstGid]};
             }
         }
+
         return {firstGid: null, tileSet: null};
     }
 
+    /**
+     * 
+     * @param {*} x 
+     * @param {*} y 
+     * @param {*} z 
+     * @returns {Tile}
+     */
     getTileAtPosition = (x, y, z) => {
         
-        
-        
-        /** @type {MapLayer} */
         const mapLayer = this.#layers[z];
         const mapTileId = mapLayer.getTileIdAtPosition(x, y);
         if(mapTileId === null)
             return null;
 
-        //firstGid here is = 0
-        // mapTileId = 996
-        //tileset = undefined. Why? 
-        
-        const { firstGid, tileSet } = this.getTileSetFromTileId(mapTileId);
+        const { firstGid,  tileSet } = this.getTileSetFromTileId(mapTileId);
 
         if(firstGid === null || tileSet === null)
             return null;
 
         const localId = mapTileId - firstGid;
 
-
-        //LocalId 996
         const tile = tileSet.getTileByLocalId(localId);
-
-        //ignore for now
-        //this.#tilesCache[mapTileId] = tile;
 
         return tile;
     }

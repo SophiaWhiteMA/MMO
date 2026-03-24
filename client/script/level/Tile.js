@@ -10,7 +10,7 @@ class Tile {
 
     /**
      * 
-     * @param {number} id 
+     * @param {number} id The tile's local ID as defined within the tile set's JSON
      * @param {Property[]} properties 
      * @param {TileSet} tileSet 
      */
@@ -31,6 +31,7 @@ class Tile {
             properties: JSON.parse(JSON.stringify(this.#properties))
         })
     }
+
 
     get properties(){
         return this.#properties;

@@ -1,25 +1,10 @@
+import assetCache from "../assets/AssetCache.js";
+import SpriteSheet from "../assets/SpriteSheet.js";
 import { combinePaths } from "../util/index.js";
 import Property from "./Property.js";
 import Tile from "./Tile.js";
 
 const PRIVATE_KEY = Symbol('PrivateConstructorKey');
-
-const fetchImage = async (url) => {
-    const response = await fetch(url);
-    const blob = await response.blob();
-    const imageObjectURL = URL.createObjectURL(blob);
-    const img = new Image();
-
-    return new Promise((resolve, reject) => {
-        img.onload = () => {
-            // IMPORTANT: Clean up the temporary URL to prevent memory leaks
-            URL.revokeObjectURL(imageObjectURL);
-            resolve(img);
-        };
-        img.onerror = reject;
-        img.src = imageObjectURL;
-    });
-}
 
 class TileSet {
 
@@ -40,8 +25,10 @@ class TileSet {
     #type;
     #version;
     #imageUrl;
-    #image;
+    
 
+    /** @type {SpriteSheet} */
+    spriteSheet;
     source;
 
     #properties = [];
@@ -79,7 +66,9 @@ class TileSet {
         output.#version = tileSetJson.version;
         output.#imageUrl = tileSetJson.image;
 
-        output.#image = await fetchImage(combinePaths(url, output.#imageUrl));
+
+        const spriteSheet = assetCache.getSpriteSheetByUrl(combinePaths(url, output.#imageUrl));
+        output.spriteSheet = spriteSheet;
 
         tileSetJson.tiles?.forEach(e => {
             output.#tiles[e.id] = new Tile(e.id, e.properties, output)
@@ -98,10 +87,6 @@ class TileSet {
 
     static getAllTileSets(){
         return this.#tileSets;
-    }
-
-    get image(){
-        return this.#image;
     }
 
     getTileByLocalId = (localId) => {
