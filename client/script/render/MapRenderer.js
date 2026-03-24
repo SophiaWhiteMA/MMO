@@ -1,5 +1,6 @@
 import Map from "../level/Map.js";
 import CameraPanner from "./CameraPanner.js";
+import MapRendererConfig from "./MapRendererConfig.js";
 
 
 export class MapRenderer {
@@ -23,10 +24,9 @@ export class MapRenderer {
     lastBufferMinTileX = undefined;
     lastBufferMinTileY = undefined;
 
+    config;
 
-    scaleFactor = 1;
-
-    /** @type {boolean} Internal variable used to track whether or not a complete re-render is required. */
+    /** @type {boolean} Variable used to track whether or not a complete re-render is required. */
     forceCompleteRerender = true;
 
     /** @type {number} The timestamp when the current frame began rendering */
@@ -55,6 +55,9 @@ export class MapRenderer {
      * @param {number} cameraY 
      */
     constructor(cameraX, cameraY) {
+        
+        this.config = new MapRendererConfig(this);
+        
         this.cameraX = cameraX;
         this.cameraY = cameraY;
 
@@ -106,14 +109,14 @@ export class MapRenderer {
             this.viewportCanvas.height = height;
 
             for (const bufferCanvas of [this.bufferCanvas, this.backgroundTileBufferCanvas]) {
-                bufferCanvas.width = width + this.map.tileWidth * 2 * this.scaleFactor;
-                bufferCanvas.height = height + this.map.tileHeight * 2 * this.scaleFactor;
+                bufferCanvas.width = width + this.map.tileWidth * 2 * this.config.scaleFactor;;
+                bufferCanvas.height = height + this.map.tileHeight * 2 * this.config.scaleFactor;;
             }
 
             //When you resize a canvas, the 2d context resets its properties back to default. 
-            this.viewportCanvasContext.imageSmoothingEnabled = false;
-            this.bufferCanvasContext.imageSmoothingEnabled = false;
-            this.backgroundTileBufferCanvasContext.imageSmoothingEnabled = false;
+            this.viewportCanvasContext.imageSmoothingEnabled = this.config.useImageSmoothing;
+            this.bufferCanvasContext.imageSmoothingEnabled = this.config.useImageSmoothing;
+            this.backgroundTileBufferCanvasContext.imageSmoothingEnabled = this.config.useImageSmoothing;
 
 
             return true;
@@ -159,11 +162,11 @@ export class MapRenderer {
 
         const tile = this.map.getTileAtPosition(tileX, tileY, layerZ);
 
-        const destinationX = (tileX - tileBufferMinTileX) * this.map.tileWidth * this.scaleFactor;
-        const destinationY = (tileY - tileBufferMinTileY) * this.map.tileHeight * this.scaleFactor;
+        const destinationX = (tileX - tileBufferMinTileX) * this.map.tileWidth * this.config.scaleFactor;;
+        const destinationY = (tileY - tileBufferMinTileY) * this.map.tileHeight * this.config.scaleFactor;;
 
-        const renderedTileWidth = this.map.tileWidth * this.scaleFactor;
-        const renderedTileHeight = this.map.tileHeight * this.scaleFactor;
+        const renderedTileWidth = this.map.tileWidth * this.config.scaleFactor;;
+        const renderedTileHeight = this.map.tileHeight * this.config.scaleFactor;;
 
         if (layerZ === 0) {
             canvasContext.fillStyle = '#000';
@@ -237,8 +240,8 @@ export class MapRenderer {
         //1. Shift the existing contents around
         const deltaXInTiles = (bufferMinTileX - this.lastBufferMinTileX);
         const deltaYInTiles = (bufferMinTileY - this.lastBufferMinTileY);
-        const deltaXInPixels = deltaXInTiles * this.map.tileWidth * this.scaleFactor;
-        const deltaYInPixels = deltaYInTiles * this.map.tileHeight * this.scaleFactor;
+        const deltaXInPixels = deltaXInTiles * this.map.tileWidth * this.config.scaleFactor;;
+        const deltaYInPixels = deltaYInTiles * this.map.tileHeight * this.config.scaleFactor;;
         
         this.backgroundTileBufferCanvasContext.drawImage(this.backgroundTileBufferCanvas, 0, 0, this.backgroundTileBufferCanvas.width, this.backgroundTileBufferCanvas.height, -deltaXInPixels, -deltaYInPixels, this.backgroundTileBufferCanvas.width, this.backgroundTileBufferCanvas.height);
 
@@ -269,18 +272,13 @@ export class MapRenderer {
         const minVisibleTileX = this.cameraX - (this.getCanvasWidthInTiles() / 2);
         const minVisibleTileY = this.cameraY - (this.getCanvasHeightInTiles() / 2);
 
-        const sourceX = (minVisibleTileX - bufferMinTileX) * this.map.tileWidth * this.scaleFactor;
-        const sourceY = (minVisibleTileY - bufferMinTileY) * this.map.tileHeight * this.scaleFactor;
-
-
-
-
+        const sourceX = (minVisibleTileX - bufferMinTileX) * this.map.tileWidth * this.config.scaleFactor;;
+        const sourceY = (minVisibleTileY - bufferMinTileY) * this.map.tileHeight * this.config.scaleFactor;;
 
         this.bufferCanvasContext.drawImage(this.backgroundTileBufferCanvas, 0, 0);
 
-
         this.viewportCanvasContext.fillStyle = '#000';
-        //this.viewportCanvasContext.fillRect(0, 0, this.viewportCanvas.width, this.viewportCanvas.height);
+        this.viewportCanvasContext.fillRect(0, 0, this.viewportCanvas.width, this.viewportCanvas.height);
         this.viewportCanvasContext.drawImage(this.bufferCanvas, sourceX, sourceY, this.viewportCanvas.width, this.viewportCanvas.height, 0, 0, this.viewportCanvas.width, this.viewportCanvas.height);
     }
 
@@ -291,7 +289,6 @@ export class MapRenderer {
     render = (timeMs) => {
 
         this.frameTimeDelta = timeMs - this.currentFrameTimeMs;
-        console.log(this.frameTimeDelta);
         this.currentFrameTimeMs = timeMs;
 
         if (!this.map)
@@ -315,9 +312,7 @@ export class MapRenderer {
 
         // Pipeline stage 3: Render foreground
 
-        // Piepline stage 4: Render tint
-
-        // Pipeline stage 5: Render l
+        // Piepline stage 4: Render lighting
 
         this.#renderBuffersToViewport();
 
@@ -328,11 +323,11 @@ export class MapRenderer {
     }
 
     getCanvasWidthInTiles = () => {
-        return this.viewportCanvas.clientWidth / this.map.tileWidth / this.scaleFactor;
+        return this.viewportCanvas.clientWidth / this.map.tileWidth / this.config.scaleFactor;;
     }
 
     getCanvasHeightInTiles = () => {
-        return this.viewportCanvas.clientHeight / this.map.tileHeight / this.scaleFactor;
+        return this.viewportCanvas.clientHeight / this.map.tileHeight / this.config.scaleFactor;;
     }
 
 
