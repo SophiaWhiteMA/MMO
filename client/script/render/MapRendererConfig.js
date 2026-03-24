@@ -2,17 +2,17 @@ export default class MapRendererConfig{
 
     mapRenderer;
 
-    _scaleFactor = 1;
-    _foregroundOpacity = 1;
-    _showGridLines = false;
-    _useImageSmoothing = false;
+    #scaleFactor = 1;
+    #foregroundOpacity = 1;
+    #showGridLines = false;
+    #useImageSmoothing = false;
 
     constructor(mapRenderer) {
         this.mapRenderer = mapRenderer;
     }
 
     get scaleFactor(){
-        return this._scaleFactor;
+        return this.#scaleFactor;
     }
 
     set scaleFactor(scaleFactor){
@@ -21,7 +21,7 @@ export default class MapRendererConfig{
     }
 
     get foregroundOpacity(){
-        return this._foregroundOpacity;
+        return this.#foregroundOpacity;
     }
 
     set foregroundOpacity(foregroundOpacity){
@@ -32,21 +32,21 @@ export default class MapRendererConfig{
     }
 
     get showGridLines(){
-        return this._showGridLines;
+        return this.#showGridLines;
     }
 
     set showGridLines(showGridLines){
         this.mapRenderer.forceCompleteRerender = true;
-        this._showGridLines = showGridLines;
+        this.#showGridLines = showGridLines;
     }
 
     get useImageSmoothing(){
-        return this._useImageSmoothing;
+        return this.#useImageSmoothing;
     }
 
     set useImageSmoothing(useImageSmoothing){
         this.mapRenderer.forceCompleteRerender = true;
-        this._useImageSmoothing = useImageSmoothing;
+        this.#useImageSmoothing = useImageSmoothing;
     }
 
     get renderForeground(){

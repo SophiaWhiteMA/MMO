@@ -175,9 +175,9 @@ export class MapRenderer {
         }
 
         if (tile !== null) {
-            const { sourceX, sourceY } = this.#getSpritesheetSourceCoordinates(tile.id);
-            canvasContext.drawImage(tile.tileSet.image, sourceX, sourceY, this.map.tileWidth, this.map.tileHeight, destinationX, destinationY, renderedTileWidth, renderedTileHeight);
 
+            const { x: spriteSheetX, y: spriteSheetY } = tile.tileSet.spriteSheet.getSpriteSheetCoordinates(tile.id);
+            tile.tileSet.spriteSheet.drawToCanvasContext(canvasContext, spriteSheetX, spriteSheetY, destinationX, destinationY, this.config.scaleFactor);
         }
     }
 
