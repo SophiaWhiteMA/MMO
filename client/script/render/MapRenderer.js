@@ -16,6 +16,9 @@ export class MapRenderer {
     bufferCanvas;
     bufferCanvasContext;
 
+    tileOutlineBufferCanvas;
+    tileOutlineBufferCanvasContext;
+
     backgroundTileBufferCanvas;
     backgroundTileBufferCanvasContext;
 
@@ -24,6 +27,7 @@ export class MapRenderer {
     lastBufferMinTileX = undefined;
     lastBufferMinTileY = undefined;
 
+    /** @type {MapRendererConfig} */
     config;
 
     /** @type {boolean} Variable used to track whether or not a complete re-render is required. */
@@ -36,7 +40,6 @@ export class MapRenderer {
     frameTimeDelta = 0;
 
     cameraPanner;
-
 
     setMap(map) {
         this.map = map;
@@ -55,9 +58,9 @@ export class MapRenderer {
      * @param {number} cameraY 
      */
     constructor(cameraX, cameraY) {
-        
+
         this.config = new MapRendererConfig(this);
-        
+
         this.cameraX = cameraX;
         this.cameraY = cameraY;
 
@@ -71,10 +74,12 @@ export class MapRenderer {
         this.bufferCanvas = document.createElement('canvas');
         this.bufferCanvasContext = this.bufferCanvas.getContext('2d');
 
+        this.tileOutlineBufferCanvas = document.createElement('canvas');
+        this.tileOutlineBufferCanvasContext = this.tileOutlineBufferCanvas.getContext('2d');
+
         // Canvas we write background tiles to before we copy them to the buffer canvas
         this.backgroundTileBufferCanvas = document.createElement('canvas');
         this.backgroundTileBufferCanvasContext = this.backgroundTileBufferCanvas.getContext('2d');
-
 
         this.resizeObserver = new ResizeObserver(this.#resizeObserverMethod);
         this.resizeObserver.observe(this.viewportCanvas);
@@ -108,16 +113,15 @@ export class MapRenderer {
             this.viewportCanvas.width = width;
             this.viewportCanvas.height = height;
 
-            for (const bufferCanvas of [this.bufferCanvas, this.backgroundTileBufferCanvas]) {
+            for (const bufferCanvas of [this.bufferCanvas, this.backgroundTileBufferCanvas, this.tileOutlineBufferCanvas]) {
                 bufferCanvas.width = width + this.map.tileWidth * 2 * this.config.scaleFactor;;
                 bufferCanvas.height = height + this.map.tileHeight * 2 * this.config.scaleFactor;;
             }
 
             //When you resize a canvas, the 2d context resets its properties back to default. 
-            this.viewportCanvasContext.imageSmoothingEnabled = this.config.useImageSmoothing;
-            this.bufferCanvasContext.imageSmoothingEnabled = this.config.useImageSmoothing;
-            this.backgroundTileBufferCanvasContext.imageSmoothingEnabled = this.config.useImageSmoothing;
-
+            for (const canvasContext of [this.viewportCanvasContext, this.bufferCanvasContext, this.tileOutlineBufferCanvasContext, this.backgroundTileBufferCanvasContext]) {
+                canvasContext.imageSmoothingEnabled = this.config.useImageSmoothing;
+            }
 
             return true;
         }
@@ -135,17 +139,40 @@ export class MapRenderer {
     }
 
     /**
-     * Converts a Tile's ID as defined within its corresponding TileSheet to a pair of physical coordinates that
-     * describe where the Tile's graphical representation exists within the underlying sprite sheet.
-     * @param {number} localTileId The tile id within the tile sheet, not the global ID present in the map file.
-     * @returns 
+     * Renders the outline of a tile to a canvas context. 
+     * @param {CanvasRenderingContext2D} canvasContext 
+     * @param {string} strokeStyle 
+     * @param {string} lineWidth 
+     * @param {number} tileX 
+     * @param {number} tileY 
      */
-    #getSpritesheetSourceCoordinates = (localTileId) => {
-        const sourceX = localTileId % this.map.width * this.map.tileWidth;
-        const sourceY = Math.floor(localTileId / this.map.width) * this.map.tileHeight;
-        return { sourceX, sourceY };
+    #renderTileOutlineToBuffferCanvasContext(canvasContext, strokeStyle, lineWidth, tileX, tileY) {
+        canvasContext.strokeStyle = strokeStyle;
+        canvasContext.lineWidth = lineWidth;
+
+        const renderedTileWidth = this.map.tileWidth * this.config.scaleFactor;
+        const renderedTileHeight = this.map.tileHeight * this.config.scaleFactor;
+
+        const {x: tileBufferMinTileX, y: tileBufferMinTileY } = this.#getBufferMinTilePosition();
+
+        const x = Math.floor(tileX - tileBufferMinTileX) * renderedTileWidth;
+        const y = Math.floor(tileY - tileBufferMinTileY) * renderedTileHeight;
+        canvasContext.strokeRect(x, y, renderedTileWidth, renderedTileHeight);
     }
 
+    /**
+     * Renders tile outlines to a canvas context for *every* visible tile
+     * @param {CanvasRenderingContext2D} canvasContext 
+     */
+    #renderGridLinesToCanvasContext(canvasContext) {
+        const { x: tileBufferMinTileX, y: tileBufferMinTileY } = this.#getBufferMinTilePosition();
+        const { x: tileBufferMaxTileX, y: tileBufferMaxTileY } = this.#getBufferMaxTilePosition();
+        for (let x = tileBufferMinTileX; x <= tileBufferMaxTileX; x++) {
+            for (let y = tileBufferMinTileY; y <= tileBufferMaxTileY; y++) {
+                this.#renderTileOutlineToBuffferCanvasContext(canvasContext, this.config.gridLineStrokeStyle, this.config.gridLineThickness, x, y);
+            }
+        }
+    }
 
     /**
      * Renders a tile to a Canvas using it's CanvasContext. It is assumed that the Canvas being draw on
@@ -165,17 +192,15 @@ export class MapRenderer {
         const destinationX = (tileX - tileBufferMinTileX) * this.map.tileWidth * this.config.scaleFactor;;
         const destinationY = (tileY - tileBufferMinTileY) * this.map.tileHeight * this.config.scaleFactor;;
 
-        const renderedTileWidth = this.map.tileWidth * this.config.scaleFactor;;
-        const renderedTileHeight = this.map.tileHeight * this.config.scaleFactor;;
+        const renderedTileWidth = this.map.tileWidth * this.config.scaleFactor;
+        const renderedTileHeight = this.map.tileHeight * this.config.scaleFactor;
 
         if (layerZ === 0) {
             canvasContext.fillStyle = '#000';
             canvasContext.fillRect(destinationX, destinationY, renderedTileWidth, renderedTileHeight);
-
         }
 
         if (tile !== null) {
-
             const { x: spriteSheetX, y: spriteSheetY } = tile.tileSet.spriteSheet.getSpriteSheetCoordinates(tile.id);
             tile.tileSet.spriteSheet.drawToCanvasContext(canvasContext, spriteSheetX, spriteSheetY, destinationX, destinationY, this.config.scaleFactor);
         }
@@ -242,7 +267,7 @@ export class MapRenderer {
         const deltaYInTiles = (bufferMinTileY - this.lastBufferMinTileY);
         const deltaXInPixels = deltaXInTiles * this.map.tileWidth * this.config.scaleFactor;;
         const deltaYInPixels = deltaYInTiles * this.map.tileHeight * this.config.scaleFactor;;
-        
+
         this.backgroundTileBufferCanvasContext.drawImage(this.backgroundTileBufferCanvas, 0, 0, this.backgroundTileBufferCanvas.width, this.backgroundTileBufferCanvas.height, -deltaXInPixels, -deltaYInPixels, this.backgroundTileBufferCanvas.width, this.backgroundTileBufferCanvas.height);
 
         // Camera pans right
@@ -265,8 +290,8 @@ export class MapRenderer {
 
     }
 
-    #renderBuffersToViewport = () => {
-        
+    #writeBuffersToViewport = () => {
+
         const { x: bufferMinTileX, y: bufferMinTileY } = this.#getBufferMinTilePosition();
 
         const minVisibleTileX = this.cameraX - (this.getCanvasWidthInTiles() / 2);
@@ -276,10 +301,41 @@ export class MapRenderer {
         const sourceY = (minVisibleTileY - bufferMinTileY) * this.map.tileHeight * this.config.scaleFactor;;
 
         this.bufferCanvasContext.drawImage(this.backgroundTileBufferCanvas, 0, 0);
+        this.bufferCanvasContext.drawImage(this.tileOutlineBufferCanvas, 0, 0);
 
         this.viewportCanvasContext.fillStyle = '#000';
         this.viewportCanvasContext.fillRect(0, 0, this.viewportCanvas.width, this.viewportCanvas.height);
+
         this.viewportCanvasContext.drawImage(this.bufferCanvas, sourceX, sourceY, this.viewportCanvas.width, this.viewportCanvas.height, 0, 0, this.viewportCanvas.width, this.viewportCanvas.height);
+    }
+
+    #renderTileOutlines() {
+
+        this.tileOutlineBufferCanvasContext.clearRect(0, 0, this.tileOutlineBufferCanvas.width, this.tileOutlineBufferCanvas.height);
+
+        if (this.config.showTileOutlines)
+            this.#renderGridLinesToCanvasContext(this.tileOutlineBufferCanvasContext);
+
+        if (this.config.highlightSelectedTile && this.mouseX !== undefined && this.mouseY !== undefined) {
+
+            const cameraPixelX = this.viewportCanvas.width / 2;
+            const cameraPixelY = this.viewportCanvas.height / 2;
+
+            const deltaPixelX = this.mouseX - cameraPixelX;
+            const deltaPixelY = this.mouseY - cameraPixelY;
+
+            const renderedTileWidth = this.map.tileWidth * this.config.scaleFactor;
+            const renderedTileHeight = this.map.tileHeight * this.config.scaleFactor;
+
+            const deltaTileX = deltaPixelX / renderedTileWidth;
+            const deltaTileY = deltaPixelY / renderedTileHeight;
+
+            const tileX = Math.floor(this.cameraX + deltaTileX);
+            const tileY = Math.floor(this.cameraY + deltaTileY);
+
+            this.#renderTileOutlineToBuffferCanvasContext(this.tileOutlineBufferCanvasContext, this.config.highlightStrokeStyle, this.config.highlightThickness, tileX, tileY);
+
+        }
     }
 
     /**
@@ -312,9 +368,11 @@ export class MapRenderer {
 
         // Pipeline stage 3: Render foreground
 
-        // Piepline stage 4: Render lighting
+        //Pipeline stage 4: render tile outlines
+        this.#renderTileOutlines();
 
-        this.#renderBuffersToViewport();
+        // Piepline stage 4: Render lighting
+        this.#writeBuffersToViewport();
 
         this.lastBufferMinTileX = bufferMinTileX;
         this.lastBufferMinTileY = bufferMinTileY;
@@ -323,13 +381,37 @@ export class MapRenderer {
     }
 
     getCanvasWidthInTiles = () => {
-        return this.viewportCanvas.clientWidth / this.map.tileWidth / this.config.scaleFactor;;
+        return this.viewportCanvas.clientWidth / this.map.tileWidth / this.config.scaleFactor;
     }
 
     getCanvasHeightInTiles = () => {
-        return this.viewportCanvas.clientHeight / this.map.tileHeight / this.config.scaleFactor;;
+        return this.viewportCanvas.clientHeight / this.map.tileHeight / this.config.scaleFactor;
     }
 
+    /**
+     * 
+     * @param {MouseEvent} evt 
+     */
+    onMouseMove = (evt) => {
+        const { clientX, clientY } = evt;
+        const rect = this.viewportCanvas.getBoundingClientRect();
+        const canvasPixelX = clientX - rect.left;
+        const canvasPixelY = clientY - rect.top;
+
+        this.mouseX = canvasPixelX;
+        this.mouseY = canvasPixelY;
+
+    }
+
+    /**
+     * 
+     * @param {MouseEvent} evt 
+     */
+    onMouseLeave = (evt) => {
+        //TODO: This is a little hacky, no? 
+        this.mouseX = -100;
+        this.mouseY = -100;
+    }
 
 }
 
