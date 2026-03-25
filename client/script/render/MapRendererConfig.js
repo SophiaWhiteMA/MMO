@@ -1,11 +1,19 @@
-export default class MapRendererConfig{
+export default class MapRendererConfig {
 
     mapRenderer;
 
     #scaleFactor = 1;
     #foregroundOpacity = 1;
-    #showGridLines = false;
+
     #useImageSmoothing = false;
+
+    showTileOutlines = false;
+    gridLineThickness = 1;
+    gridLineStrokeStyle = 'black';
+
+    highlightSelectedTile = true;
+    highlightThickness = 1;
+    highlightStrokeStyle = 'rgb(68, 143, 255)'
 
     constructor(mapRenderer) {
         this.mapRenderer = mapRenderer;
@@ -16,7 +24,7 @@ export default class MapRendererConfig{
     }
 
     set scaleFactor(scaleFactor){
-        this._scaleFactor = scaleFactor;
+        this.#scaleFactor = scaleFactor;
         this.mapRenderer.forceCompleteRerender = true;
     }
 
@@ -27,17 +35,8 @@ export default class MapRendererConfig{
     set foregroundOpacity(foregroundOpacity){
         if(foregroundOpacity < 0 || foregroundOpacity > 1)
             throw new Error("The foreground opacity for a MapRenderConfig object must be >= 0 and <= 1")
-        this._foregroundOpacity = foregroundOpacity;
+        this.#foregroundOpacity = foregroundOpacity;
         this.mapRenderer.forceCompleteRerender = true;
-    }
-
-    get showGridLines(){
-        return this.#showGridLines;
-    }
-
-    set showGridLines(showGridLines){
-        this.mapRenderer.forceCompleteRerender = true;
-        this.#showGridLines = showGridLines;
     }
 
     get useImageSmoothing(){
@@ -50,7 +49,7 @@ export default class MapRendererConfig{
     }
 
     get renderForeground(){
-        return this.foregroundOpacity > 0;
+        return this.#foregroundOpacity > 0;
     }
 
 }
