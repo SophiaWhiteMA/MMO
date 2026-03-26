@@ -1,3 +1,4 @@
+import entityManager from "../entity/EntityManager.js";
 import Map from "../level/Map.js";
 import CameraPanner from "./CameraPanner.js";
 import MapRendererConfig from "./MapRendererConfig.js";
@@ -7,7 +8,11 @@ export class MapRenderer {
 
     /** @type {Map} */
     map;
+
+    /** @type {Number} */
     cameraX;
+
+    /** @type {Number} */
     cameraY;
 
     viewportCanvas;
@@ -18,6 +23,9 @@ export class MapRenderer {
 
     tileOutlineBufferCanvas;
     tileOutlineBufferCanvasContext;
+
+    entityBufferCanvas;
+    entityBufferCanvasContext;
 
     backgroundTileBufferCanvas;
     backgroundTileBufferCanvasContext;
@@ -41,12 +49,20 @@ export class MapRenderer {
 
     cameraPanner;
 
+    /**
+     * 
+     * @param {Map} map 
+     */
     setMap(map) {
         this.map = map;
         this.#resizeCanvases();
         this.forceCompleteRerender = true;
     }
 
+    /**
+     * 
+     * @returns {Map}
+     */
     getMap() {
         return this.map;
     }
@@ -74,8 +90,13 @@ export class MapRenderer {
         this.bufferCanvas = document.createElement('canvas');
         this.bufferCanvasContext = this.bufferCanvas.getContext('2d');
 
+        // Canvas we write tile outlines and grid lines to
         this.tileOutlineBufferCanvas = document.createElement('canvas');
         this.tileOutlineBufferCanvasContext = this.tileOutlineBufferCanvas.getContext('2d');
+
+        // Canvas we draw entities to
+        this.entityBufferCanvas = document.createElement('canvas');
+        this.entityBufferCanvasContext = this.entityBufferCanvas.getContext('2d');
 
         // Canvas we write background tiles to before we copy them to the buffer canvas
         this.backgroundTileBufferCanvas = document.createElement('canvas');
@@ -83,7 +104,8 @@ export class MapRenderer {
 
         this.resizeObserver = new ResizeObserver(this.#resizeObserverMethod);
         this.resizeObserver.observe(this.viewportCanvas);
-        this.cameraPanner = new CameraPanner(this)
+        this.cameraPanner = new CameraPanner(this);
+        
     }
 
     #resizeObserverMethod = (entries) => {
@@ -113,13 +135,13 @@ export class MapRenderer {
             this.viewportCanvas.width = width;
             this.viewportCanvas.height = height;
 
-            for (const bufferCanvas of [this.bufferCanvas, this.backgroundTileBufferCanvas, this.tileOutlineBufferCanvas]) {
+            for (const bufferCanvas of [this.bufferCanvas, this.tileOutlineBufferCanvas, this.entityBufferCanvas, this.backgroundTileBufferCanvas]) {
                 bufferCanvas.width = width + this.map.tileWidth * 2 * this.config.scaleFactor;;
                 bufferCanvas.height = height + this.map.tileHeight * 2 * this.config.scaleFactor;;
             }
 
             //When you resize a canvas, the 2d context resets its properties back to default. 
-            for (const canvasContext of [this.viewportCanvasContext, this.bufferCanvasContext, this.tileOutlineBufferCanvasContext, this.backgroundTileBufferCanvasContext]) {
+            for (const canvasContext of [this.viewportCanvasContext, this.bufferCanvasContext, this.tileOutlineBufferCanvasContext, this.entityBufferCanvasContext, this.backgroundTileBufferCanvasContext]) {
                 canvasContext.imageSmoothingEnabled = this.config.useImageSmoothing;
             }
 
@@ -189,8 +211,8 @@ export class MapRenderer {
 
         const tile = this.map.getTileAtPosition(tileX, tileY, layerZ);
 
-        const destinationX = (tileX - tileBufferMinTileX) * this.map.tileWidth * this.config.scaleFactor;;
-        const destinationY = (tileY - tileBufferMinTileY) * this.map.tileHeight * this.config.scaleFactor;;
+        const destinationX = (tileX - tileBufferMinTileX) * this.map.tileWidth * this.config.scaleFactor;
+        const destinationY = (tileY - tileBufferMinTileY) * this.map.tileHeight * this.config.scaleFactor;
 
         const renderedTileWidth = this.map.tileWidth * this.config.scaleFactor;
         const renderedTileHeight = this.map.tileHeight * this.config.scaleFactor;
@@ -251,6 +273,7 @@ export class MapRenderer {
         this.#renderTilesInRange(this.backgroundTileBufferCanvasContext, bufferMinTileX, bufferMaxTileX, bufferMinTileY, bufferMaxTileY, 0, (this.map?.minimumForegroundLayer ?? this.map.layers.length) - 1);
     }
 
+    
     /**
      * Invoked after the camera position has been moved and the only background tiles that
      * need to be rendered are the ones that were previously invisible. 
@@ -302,6 +325,7 @@ export class MapRenderer {
 
         this.bufferCanvasContext.drawImage(this.backgroundTileBufferCanvas, 0, 0);
         this.bufferCanvasContext.drawImage(this.tileOutlineBufferCanvas, 0, 0);
+        this.bufferCanvasContext.drawImage(this.entityBufferCanvas, 0, 0)
 
         this.viewportCanvasContext.fillStyle = '#000';
         this.viewportCanvasContext.fillRect(0, 0, this.viewportCanvas.width, this.viewportCanvas.height);
@@ -339,6 +363,30 @@ export class MapRenderer {
     }
 
     /**
+     * Renders every background tile that is within the bounds described by the background tile buffer to the background tile buffer
+     */
+    #renderEntitiesToBuffer = (timeMs) => {
+        const { x: bufferMinTileX, y: bufferMinTileY } = this.#getBufferMinTilePosition();
+        const { x: bufferMaxTileX, y: bufferMaxTileY } = this.#getBufferMaxTilePosition();
+        this.entityBufferCanvasContext.clearRect(0, 0, this.entityBufferCanvas.width, this.entityBufferCanvas.height);
+        const entities = entityManager.getEntities();
+        for(const e of entities) {
+
+            const {x: visualX, y: visualY} = e.getVisualPosition(timeMs);
+                        
+            const isVisible = visualX >= bufferMinTileX && visualX <= bufferMaxTileX && visualY >= bufferMinTileY && visualY <= bufferMaxTileY;
+            if(!isVisible)
+                continue;
+            
+            const destinationX = Math.floor((visualX - bufferMinTileX) * this.map.tileWidth * this.config.scaleFactor);
+            const destinationY = Math.floor((visualY - bufferMinTileY) * this.map.tileHeight * this.config.scaleFactor);
+            e.drawToCanvasContext(this.entityBufferCanvasContext, destinationX, destinationY, this.config.scaleFactor);
+        }
+
+    }
+
+
+    /**
      * 
      * @param {number} timeMs 
      */
@@ -365,6 +413,7 @@ export class MapRenderer {
         }
 
         // Pipeline stage 2: Render entites
+        this.#renderEntitiesToBuffer(timeMs);
 
         // Pipeline stage 3: Render foreground
 
@@ -416,4 +465,7 @@ export class MapRenderer {
 }
 
 
-export default new MapRenderer(0, 0);
+/** @type {MapRenderer} */
+const mapRenderer = new MapRenderer(0, 0);
+
+export default mapRenderer;

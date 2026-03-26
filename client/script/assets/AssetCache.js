@@ -53,10 +53,20 @@ export class AssetCache {
 
     }
 
+    /**
+     * 
+     * @param {*} id 
+     * @returns {Map}
+     */
     getMapById(id) {
         return this.#maps.find(e => e.id === id);
     }
 
+    /**
+     * 
+     * @param {*} url 
+     * @returns {SpriteSheet}
+     */
     getSpriteSheetByUrl(url) {
         return this.#spriteSheets[url];
     }
@@ -64,6 +74,7 @@ export class AssetCache {
 }
 
 
+/** @type {AssetCache} */
 const assetCache = new AssetCache(PRIVATE_KEY);
 
 export default assetCache;

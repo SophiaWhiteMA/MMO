@@ -1,5 +1,5 @@
-import assetCache, { AssetCache } from './assets/AssetCache.js';
-import mapRenderer, { MapRenderer } from './render/MapRenderer.js';
+import assetCache from './assets/AssetCache.js';
+import mapRenderer from './render/MapRenderer.js';
 
 
 
@@ -50,7 +50,6 @@ import mapRenderer, { MapRenderer } from './render/MapRenderer.js';
             mapRenderer.setMap(map);
             mapRenderer.cameraX = map.width / 2;
             mapRenderer.cameraY = map.height / 2;
-            //mapRenderer.cameraPanner.panCamera(mapRenderer.map.width - 1, mapRenderer.map.height - 1, 10_000);
 
             mapRenderer.setMap(assetCache.getMapById('test_level'));
 
