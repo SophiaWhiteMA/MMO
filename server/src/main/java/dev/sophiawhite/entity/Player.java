@@ -32,4 +32,12 @@ public class Player extends Entity {
     public void sendNetworkCommand(String command) {
         session.getAsyncRemote().sendText(command);
     }
+
+    @Override
+    public String getNetworkName() {
+        return "player";
+    }
 }
+
+
+

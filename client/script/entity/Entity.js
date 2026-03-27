@@ -3,6 +3,7 @@ import SpriteSheet from "../assets/SpriteSheet.js";
 import Animation from "./Animation.js";
 
 import { TICK_INTERVAL } from "../constants/index.js";
+import mapRenderer from "../render/MapRenderer.js";
 
 export default class Entity {
 
@@ -26,7 +27,16 @@ export default class Entity {
 
     // An arbitrary data field. Used by subclasses to do things like store another player's worn equipment, their skills, etc
     /** @type {Object} */
-    metaData;
+    #metaData;
+
+    set metaData(metaData){
+        this.#metaData = metaData;
+        this._ingestMetadata(metaData);
+    }
+
+    get metaData (){
+        return this.#metaData;
+    }
 
     /** @type {Animation} */
     #animation;
@@ -36,6 +46,7 @@ export default class Entity {
         this.position.x = x;
         this.position.y = y;
         this.previousPosition = {...this.position};
+        this.visualPosition = {...this.position};
         this.metadata = metadata;
     }
 
@@ -58,36 +69,32 @@ export default class Entity {
      */
     move = (x, y, timeMs) => {
         this.movementStartTime = timeMs;
-        this.previousPosition = {...this.position};
+        this.previousPosition = {...this.visualPosition};
         this.position = { x, y };
     }
 
-    /**
-     * 
-     * @param {Number} timeMs Timestawmp of current frame
-     * @returns {{ x: Number, y: Number }}
-     */
-    getVisualPosition = (timeMs) => {
+    updateVisualPosition = (timeMs) => {
 
         if(this.movementStartTime === null || this.movementStartTime === undefined)
-            return {...this.position};
+            return;
 
         const timeDelta = timeMs - this.movementStartTime;
 
-        let fraction = (timeDelta / TICK_INTERVAL);
-        if(fraction > 1) {
+        let fraction = (timeDelta / 500);
+        if (fraction >= 1) {
             fraction = 1;
-            this.movementStartTime = null;
-            // Seems a little hacky to have movementStartTime update here... Can we eventually move this to entity manager? 
+                this.movementStartTime = null;
+
         }
-        
+
         const xDelta = this.position.x - this.previousPosition.x;
         const yDelta = this.position.y - this.previousPosition.y;
 
-        return {
+        this.visualPosition = {
             x: this.previousPosition.x + (xDelta * fraction),
             y: this.previousPosition.y + (yDelta * fraction)
         }
+
     }
 
     get name(){
@@ -108,7 +115,7 @@ export default class Entity {
 
     set direction(d) {
         const allowedDirections = ['NORTH', 'SOUTH', 'EAST', 'WEST'];
-        if(!allowedDirections.includes('d'))
+        if(!allowedDirections.includes(d))
             throw new Error('An entity can only have NORTH, SOUTH, EAST, or WEST as a direction.');
         this.#direction = d;
     }
@@ -132,7 +139,7 @@ export default class Entity {
 
     /**
      * Intended to be overloaded by subclasses. The metadata from Entity's constructor
-     * is fed into this method at the time of instantiation. Subclasses can interpret
+     * is fed into this method at the time of instantiation AND when the metadata changes. Subclasses can interpret
      * this data any way they wish.
      * @param {Object} metadata 
      */
@@ -145,7 +152,7 @@ export default class Entity {
      * @returns {{x: Number, y: Number}}
      */
     _getSpriteSheetCoords = () => {
-        return { x: 3, y: 29 };
+        return { x: 0, y: 0 };
     }
 
     //Intended to be overwritten by subclasses.

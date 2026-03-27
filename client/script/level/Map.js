@@ -126,7 +126,7 @@ class Map {
      * @returns {Tile}
      */
     getTileAtPosition = (x, y, z) => {
-        
+
         const mapLayer = this.#layers[z];
         const mapTileId = mapLayer.getTileIdAtPosition(x, y);
         if(mapTileId === null)

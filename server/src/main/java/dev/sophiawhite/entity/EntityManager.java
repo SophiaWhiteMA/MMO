@@ -1,6 +1,11 @@
 package dev.sophiawhite.entity;
 
+import dev.sophiawhite.command.network.outbound.entity.CommandEntitySetPlayer;
+import dev.sophiawhite.command.network.outbound.entity.OutboundNetworkCommandEntityAdd;
+import dev.sophiawhite.command.network.outbound.entity.OutboundNetworkCommandEntityRemove;
+import dev.sophiawhite.command.network.outbound.map.CommandMapLoad;
 import dev.sophiawhite.level.MapInstance;
+import jakarta.websocket.Session;
 
 
 import java.util.Map;
@@ -25,34 +30,33 @@ public class EntityManager {
         entitiesToMapInstances = new HashMap<Entity, MapInstance>();
     }
 
-    public static EntityManager getInstance(){
+    public static EntityManager    getInstance(){
         return instance;
     }
 
+    private void addEntry(Entity e, MapInstance mapInstance) {
+        List<Entity> entitiesList = mapInstancesToEntity.computeIfAbsent(mapInstance, k -> new ArrayList<>());
 
-    private void removeEntry(Entity e, MapInstance mapInstance) {
-        //TODO: Broadcast to relevant players that entity has been added
-        entitiesToMapInstances.remove(e);
-        List<Entity> entitiesList = mapInstancesToEntity.get(mapInstance);
-        if(entitiesList != null)
-            entitiesList.remove(e);
-    }
-
-    private void addEntry(Entity e, MapInstance mapInstance){
-        //TODO: Broadcast to relevant players that entity has been removed
+        entitiesList.add(e);
         entitiesToMapInstances.put(e, mapInstance);
-        List<Entity> entitiesList = mapInstancesToEntity.get(mapInstance);
-        if(entitiesList == null) {
-            List<Entity> newEntityList = new ArrayList<Entity>();
-            newEntityList.add(e);
-            mapInstancesToEntity.put(mapInstance, newEntityList);
-        } else {
-            entitiesList.add(e);
+
+        if (e instanceof Player player) {
+            player.sendNetworkCommand(new CommandMapLoad(mapInstance.getMap()));
+        }
+
+        for (Entity existing : entitiesList) {
+            if (existing instanceof Player otherPlayer && existing != e) {
+                otherPlayer.sendNetworkCommand(new OutboundNetworkCommandEntityAdd(e));
+            }
+
+            if (e instanceof Player newPlayer) {
+                newPlayer.sendNetworkCommand(new OutboundNetworkCommandEntityAdd(existing));
+            }
         }
     }
 
     public void assignEntityToMapInstance(Entity e, MapInstance mapInstance) {
-        removeEntry(e, mapInstance);
+        removeEntity(e);
         addEntry(e, mapInstance);
     }
 
@@ -64,8 +68,16 @@ public class EntityManager {
         entitiesToMapInstances.remove(e);
 
         List<Entity> entityList = mapInstancesToEntity.get(mapInstance);
-        if(entityList != null)
-            entityList.remove(e);
+        if(entityList == null)
+            return;
+
+        entityList.remove(e);
+
+        for(Entity e2: entityList) {
+            if(e2 instanceof  Player player) {
+                player.sendNetworkCommand(new OutboundNetworkCommandEntityRemove(e));
+            }
+        }
     }
 
     public MapInstance getMapInstance(Entity e) {
@@ -74,6 +86,25 @@ public class EntityManager {
 
     public List<Entity> getEntities(MapInstance mapInstance) {
         return mapInstancesToEntity.get(mapInstance);
+    }
+
+    public List<Player> getPlayers(){
+        List<Player> allPlayers = new ArrayList<Player>();
+        for(Entity e: this.entitiesToMapInstances.keySet()) {
+            if(e instanceof Player player) {
+                allPlayers.add(player);
+            }
+        }
+        return allPlayers;
+    }
+
+    public Player getPlayerBySession(Session session) {
+        List<Player> players = this.getPlayers();
+        for(Player player: players) {
+            if(player.getSession() == session)
+                return player;
+        }
+        return null;
     }
 
 }

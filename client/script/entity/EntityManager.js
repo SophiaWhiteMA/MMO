@@ -5,6 +5,9 @@ export class EntityManager {
     /** @type {Array<Entity>} */
     #entities = [];
 
+    
+    playerId = undefined;
+
     constructor(){
         
     }
@@ -33,6 +36,21 @@ export class EntityManager {
         return [...this.#entities];
     }
 
+    getEntityCount = () => {
+        return this.#entities.length;
+    }
+
+    /**
+     * 
+     * @param {String} id 
+     */
+    removeEntityById = (id) => {
+        this.#entities = this.#entities.filter(e => e.uuid !== id);
+    }
+
+    getEntityById = (id) => {
+        return this.#entities.find(e => e.uuid === id);
+    }
 
 }
 

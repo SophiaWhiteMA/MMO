@@ -3,7 +3,7 @@ export default class MapRendererConfig {
     mapRenderer;
 
     #scaleFactor = 1;
-    #foregroundOpacity = 1;
+    #foregroundOpacity = 0.5;
 
     #useImageSmoothing = false;
 
@@ -14,6 +14,9 @@ export default class MapRendererConfig {
     highlightSelectedTile = true;
     highlightThickness = 1;
     highlightStrokeStyle = 'rgb(68, 143, 255)'
+
+    /** @type {Boolean} */
+    renderDebugMenu = true;
 
     constructor(mapRenderer) {
         this.mapRenderer = mapRenderer;

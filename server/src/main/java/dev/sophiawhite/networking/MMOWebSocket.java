@@ -1,6 +1,9 @@
 package dev.sophiawhite.networking;
 
 import dev.sophiawhite.command.network.inbound.InboundNetworkCommand;
+import dev.sophiawhite.command.network.inbound.InboundNetworkCommandQueue;
+import dev.sophiawhite.entity.EntityManager;
+import dev.sophiawhite.entity.Player;
 import dev.sophiawhite.logging.LogLevel;
 import dev.sophiawhite.logging.Logger;
 import jakarta.websocket.OnClose;
@@ -15,7 +18,10 @@ import jakarta.websocket.server.ServerEndpoint;
 public class MMOWebSocket {
 
 
-    private Logger logger = Logger.getInstance();
+    private final Logger logger = Logger.getInstance();
+    private final InboundNetworkCommandQueue inboundNetworkCommandQueue = InboundNetworkCommandQueue.getInstance();
+
+    private final EntityManager entityManager = EntityManager.getInstance();
 
     @OnOpen
     public void onOpen(Session session) {
@@ -24,15 +30,15 @@ public class MMOWebSocket {
 
     @OnMessage
     public void onMessage(String message, Session session) {
-
-        logger.log(LogLevel.NETWORK, message);
-        InboundNetworkCommand.parseCommand(session, message);
-
+        inboundNetworkCommandQueue.enqueueCommand(message, session);
     }
 
     @OnClose
     public void onClose(Session session) {
-        logger.log(LogLevel.NETWORK, "Closed?");
+        Player player = entityManager.getPlayerBySession(session);
+        if(player == null)
+            return;
+        entityManager.removeEntity(player);
     }
 
     @OnError
