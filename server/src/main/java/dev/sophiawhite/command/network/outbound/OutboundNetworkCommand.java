@@ -8,18 +8,4 @@ import java.util.List;
 
 public interface OutboundNetworkCommand {
 
-   public String toString();
-
-    public static String getDescription(){
-        return null;
-    };
-
-    public static String getLabel() {
-        return null;
-    }
-
-   public static String getHelp(){
-        return null;
-   };
-
 }

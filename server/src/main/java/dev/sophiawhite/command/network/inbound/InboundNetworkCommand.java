@@ -1,5 +1,8 @@
 package dev.sophiawhite.command.network.inbound;
 
+import dev.sophiawhite.command.network.inbound.player.InboundNetworkCommandPlayerMove;
+import dev.sophiawhite.logging.LogLevel;
+import dev.sophiawhite.logging.Logger;
 import jakarta.websocket.Session;
 
 import java.util.ArrayList;
@@ -11,6 +14,9 @@ public abstract class InboundNetworkCommand {
     private static final List<InboundNetworkCommand> networkCommands = new ArrayList<InboundNetworkCommand>();
 
     public static final CommandLogin networkCommandLogin = new CommandLogin();
+    private static final InboundNetworkCommandPlayerMove networkCommandMove = new InboundNetworkCommandPlayerMove();
+
+    private static final Logger logger = Logger.getInstance();
 
     private final String label;
     private final String description;
@@ -35,9 +41,9 @@ public abstract class InboundNetworkCommand {
         return this.help;
     }
 
-    public abstract boolean onCommand(Session session, String[] args);
+    public abstract void onCommand(Session session, String[] args) throws Exception;
 
-    public static boolean parseCommand(Session session, String commandString) {
+    public static void parseCommand(Session session, String commandString) {
 
         String[] splits = commandString.split(" ");
 
@@ -45,15 +51,17 @@ public abstract class InboundNetworkCommand {
 
         String[] args  = splits.length > 1 ? Arrays.copyOfRange(splits, 1, splits.length) : new String[0];
 
-
-
         for(InboundNetworkCommand command: networkCommands) {
             if(command.label.equals(label)) {
-                return command.onCommand(session, args);
+                try {
+                    command.onCommand(session, args);
+                } catch (Exception exc) {
+                    logger.log(LogLevel.NETWORK, "Error parsing network command.");
+                    exc.printStackTrace();
+                }
+                return;
             }
         }
-
-        return false;
 
     }
 

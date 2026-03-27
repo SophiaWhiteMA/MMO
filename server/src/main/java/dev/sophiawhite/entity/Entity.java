@@ -1,8 +1,9 @@
 package dev.sophiawhite.entity;
 
-import dev.sophiawhite.command.network.outbound.CommandLoadMap;
+import dev.sophiawhite.command.network.outbound.entity.OutboundNetworkCommandEntityMove;
 import dev.sophiawhite.level.MapInstance;
-import dev.sophiawhite.level.MapInstanceManager;
+
+import java.util.UUID;
 
 public abstract class Entity {
 
@@ -10,16 +11,15 @@ public abstract class Entity {
     private int x = 0;
     private int y = 0;
 
-    public Entity(){
+    private UUID uuid;
 
+    public abstract String getNetworkName();
+
+    public Entity(){
+        this.uuid = UUID.randomUUID();
     }
 
     public void setMapInstance(MapInstance mapInstance) {
-
-        if(this instanceof Player player) {
-            player.sendNetworkCommand(new CommandLoadMap(mapInstance.getMap()));
-        }
-
         entityManager.assignEntityToMapInstance(this, mapInstance);
     }
 
@@ -33,6 +33,19 @@ public abstract class Entity {
 
     public int getY(){
         return this.y;
+    }
+
+    public UUID getUUID(){
+        return this.uuid;
+    }
+
+    public void move(int x, int y) {
+        this.x = x;
+        this.y = y;
+        OutboundNetworkCommandEntityMove cmd = new OutboundNetworkCommandEntityMove(this, x, y);
+        for(Player p: this.getMapInstance().getPlayers()) {
+            p.sendNetworkCommand(cmd);
+        }
     }
 
 }

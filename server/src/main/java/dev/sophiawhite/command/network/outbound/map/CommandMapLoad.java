@@ -1,14 +1,15 @@
-package dev.sophiawhite.command.network.outbound;
+package dev.sophiawhite.command.network.outbound.map;
 
+import dev.sophiawhite.command.network.outbound.OutboundNetworkCommand;
 import dev.sophiawhite.level.Map;
 
-public class CommandLoadMap implements OutboundNetworkCommand {
+public class CommandMapLoad implements OutboundNetworkCommand {
 
     private static String description;
 
     private Map map;
 
-    public CommandLoadMap(Map map){
+    public CommandMapLoad(Map map){
         this.map = map;
     }
 
@@ -17,7 +18,7 @@ public class CommandLoadMap implements OutboundNetworkCommand {
     }
 
     public static String getLabel() {
-        return "loadmap";
+        return "map load";
     }
 
     public static String getHelp() {
