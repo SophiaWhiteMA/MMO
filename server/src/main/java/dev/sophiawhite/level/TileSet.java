@@ -32,10 +32,10 @@ public class TileSet {
     private String name;
 
     private PropertyList propertyList;
-    private List<Tile> tiles;
+    private Map<Integer, Tile> tiles;
 
     private TileSet() {
-        this.tiles = new ArrayList<Tile>();
+        this.tiles = new HashMap<Integer, Tile>();
     }
 
     public static TileSet readFromPath(String path) throws IOException {
@@ -127,12 +127,20 @@ public class TileSet {
         return this.propertyList;
     }
 
-    public List<Tile> getTiles(){
-        return this.tiles;
-    }
-
     public String getFilePath(){
         return this.filePath;
+    }
+
+    public Tile getTileByLocalId(int localId) {
+
+        Tile existingTile = this.tiles.get(localId);
+        if(existingTile != null)
+            return existingTile;
+
+        Tile newTile = new Tile(localId, new PropertyList());
+        this.tiles.put(localId, newTile);
+        return newTile;
+
     }
 
 }

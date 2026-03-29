@@ -10,5 +10,69 @@
     "properties": [
     ],
     "propertyTypes": [
+        {
+            "color": "#ffa0a0a4",
+            "drawFill": true,
+            "id": 1,
+            "members": [
+                {
+                    "name": "destinationX",
+                    "type": "int",
+                    "value": 0
+                },
+                {
+                    "name": "destinationY",
+                    "type": "int",
+                    "value": 0
+                },
+                {
+                    "name": "instanced",
+                    "type": "bool",
+                    "value": false
+                },
+                {
+                    "name": "target",
+                    "type": "string",
+                    "value": ""
+                }
+            ],
+            "name": "MapLink",
+            "type": "class",
+            "useAs": [
+                "property",
+                "object",
+                "project"
+            ]
+        },
+        {
+            "color": "#ffa0a0a4",
+            "drawFill": true,
+            "id": 2,
+            "members": [
+                {
+                    "name": "entityName",
+                    "type": "bool",
+                    "value": false
+                },
+                {
+                    "name": "respawnTimer",
+                    "type": "int",
+                    "value": 0
+                }
+            ],
+            "name": "EntitySpawnpoint",
+            "type": "class",
+            "useAs": [
+                "property",
+                "map",
+                "layer",
+                "object",
+                "tile",
+                "tileset",
+                "wangcolor",
+                "wangset",
+                "project"
+            ]
+        }
     ]
 }

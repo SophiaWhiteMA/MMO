@@ -87,11 +87,7 @@ const setAnimation = () => {
 }
 
 const setPlayer = (args) => {
-    const entityId = args[0];
-    const entity = entityManager.getEntityById(entityId);
-    if(!entity)
-        return;
-    mapRenderer.camera.trackedEntity = entity;
+    entityManager.playerId = args[0]
 }
 
 const subCommandMapping = {

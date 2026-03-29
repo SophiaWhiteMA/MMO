@@ -1,4 +1,5 @@
 import Entity from "../entity/Entity.js";
+import entityManager from "../entity/EntityManager.js";
 import MapRenderer from "./MapRenderer.js";
 
 /**
@@ -9,7 +10,7 @@ class Camera {
     mapRenderer;
 
     /** @type {Entity} */
-    trackedEntity;
+    trackedEntityId;
 
     /** @type {Number} */
     #x;
@@ -81,20 +82,38 @@ class Camera {
         this.#x = x;
     }
 
-    set y(y){
+    set y(y) {
         this.#y = y;
     }
 
-    get x(){
-        if(this.trackedEntity)
-            return this.trackedEntity.visualPosition.x;
-        return this.#x;
+    get x() {
+
+        const playerId = entityManager.playerId;
+
+        if (!playerId)
+            return this.#x;
+        
+        const player = entityManager.getEntityById(playerId);
+        if(!player)
+            return this.#x;
+
+        return player.visualPosition.x;
+
     }
 
-    get y(){
-        if(this.trackedEntity)
-            return this.trackedEntity.visualPosition.y;
-        return this.#y;
+    get y() {
+
+        const playerId = entityManager.playerId;
+
+        if (!playerId)
+            return this.#y;
+        
+        const player = entityManager.getEntityById(playerId);
+        if(!player)
+            return this.#y;
+
+        return player.visualPosition.y;
+
     }
 
 }

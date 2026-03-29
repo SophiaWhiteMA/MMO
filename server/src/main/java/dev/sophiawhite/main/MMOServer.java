@@ -1,9 +1,10 @@
 package dev.sophiawhite.main;
 
-import dev.sophiawhite.command.cli.TerminalCommand;
-import dev.sophiawhite.command.network.inbound.TaskProcessInboundNetworkCommandQueue;
+import dev.sophiawhite.command.network.tasks.TaskProcessInboundNetworkCommandQueue;
+import dev.sophiawhite.command.network.tasks.TaskProcessOutboundNetworkCommandQueue;
+import dev.sophiawhite.command.network.tasks.TaskPurgeClosedSockets;
 import dev.sophiawhite.config.ServerConfig;
-import dev.sophiawhite.level.Map;
+import dev.sophiawhite.entity.TaskTickAllEntities;
 import dev.sophiawhite.level.MapInstanceManager;
 import dev.sophiawhite.logging.LogLevel;
 import dev.sophiawhite.logging.Logger;
@@ -11,10 +12,6 @@ import dev.sophiawhite.networking.MMOWebSocket;
 import dev.sophiawhite.tasks.TaskManager;
 import jakarta.websocket.DeploymentException;
 import org.glassfish.tyrus.server.Server;
-
-import java.util.Scanner;
-
-import java.util.logging.LogManager;
 
 public class MMOServer implements Runnable {
 
@@ -53,9 +50,10 @@ public class MMOServer implements Runnable {
 
         tiledMapInstanceManager.initialize();
 
+        taskManager.scheduleRepeatingTask(new TaskPurgeClosedSockets(), 1);
         taskManager.scheduleRepeatingTask(new TaskProcessInboundNetworkCommandQueue(), 1);
-
-
+        taskManager.scheduleRepeatingTask(new TaskTickAllEntities(), 1);
+        taskManager.scheduleRepeatingTask(new TaskProcessOutboundNetworkCommandQueue(), 1);
 
         double drawInterval = 1000000000 / ServerConfig.getInstance().getTicksPerSecond();
 
@@ -72,22 +70,9 @@ public class MMOServer implements Runnable {
                 taskManager.onTick();
                 delta--;
             }
+
         }
 
-        /**
-         *         new Thread(new Runnable() {
-         *             @Override
-         *             public void run() {
-         *                 Scanner scanner = new Scanner(System.in);
-         *
-         *                 while (true) {
-         *                     String nextLine = scanner.nextLine();
-         *                     TerminalCommand.parseCommand(nextLine);
-         *                 }
-         *
-         *             }
-         *         }).start();
-         */
 
     }
 

@@ -3,22 +3,38 @@ package dev.sophiawhite.level;
 import com.fasterxml.jackson.databind.JsonNode;
 
 import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.List;
 
 public class Tile {
 
     private int id;
-    private List<Property> properties;
+    private PropertyList propertyList;
 
     private Tile(){
-        this.properties = new ArrayList<Property>();
+        this.propertyList = new PropertyList();
+    }
+
+    public Tile(int id, PropertyList propertyList){
+        this.id = id;
+        this.propertyList = propertyList;
     }
 
     private static Tile singleTileFromJson(JsonNode tile) {
         Tile output = new Tile();
         output.id = tile.path("id").asInt();
-        output.properties = Property.fromJson(tile.path("properties"));
+        output.propertyList = PropertyList.fromJson(tile.path("properties"));
         return output;
+    }
+
+
+    public PropertyList getPropertyList(){
+        return this.propertyList;
+    }
+
+    public boolean isSolid(){
+        return this.propertyList.getBoolean("solid");
     }
 
     /**
@@ -26,16 +42,18 @@ public class Tile {
      * @param tiles Array OR single JSON object expected.
      * @return List of all tiles in the array, or the single tile provided if input was not array.
      */
-    public static List<Tile> fromJson(JsonNode tiles) {
-        List<Tile> output = new ArrayList<Tile>();
+    public static Map<Integer, Tile> fromJson(JsonNode tiles) {
+        Map<Integer, Tile> output = new HashMap<Integer, Tile>();
 
 
         if (tiles.isArray()) {
-            for (JsonNode tile : tiles) {
-                output.add(singleTileFromJson(tile));
+            for (JsonNode jsonTile : tiles) {
+                Tile tile = singleTileFromJson(jsonTile);
+                output.put(tile.id, tile);
             }
         } else {
-            output.add(singleTileFromJson(tiles));
+            Tile tile = singleTileFromJson(tiles);
+            output.put(tile.id, tile);
         }
 
         return output;

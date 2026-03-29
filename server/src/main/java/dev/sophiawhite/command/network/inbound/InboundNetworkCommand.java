@@ -1,5 +1,6 @@
 package dev.sophiawhite.command.network.inbound;
 
+import dev.sophiawhite.command.network.inbound.player.InboundNetworkCommandLogin;
 import dev.sophiawhite.command.network.inbound.player.InboundNetworkCommandPlayerMove;
 import dev.sophiawhite.logging.LogLevel;
 import dev.sophiawhite.logging.Logger;
@@ -13,7 +14,7 @@ public abstract class InboundNetworkCommand {
 
     private static final List<InboundNetworkCommand> networkCommands = new ArrayList<InboundNetworkCommand>();
 
-    public static final CommandLogin networkCommandLogin = new CommandLogin();
+    public static final InboundNetworkCommandLogin networkCommandLogin = new InboundNetworkCommandLogin();
     private static final InboundNetworkCommandPlayerMove networkCommandMove = new InboundNetworkCommandPlayerMove();
 
     private static final Logger logger = Logger.getInstance();

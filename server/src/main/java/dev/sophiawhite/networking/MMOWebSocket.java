@@ -3,6 +3,7 @@ package dev.sophiawhite.networking;
 import dev.sophiawhite.command.network.inbound.InboundNetworkCommand;
 import dev.sophiawhite.command.network.inbound.InboundNetworkCommandQueue;
 import dev.sophiawhite.entity.EntityManager;
+import dev.sophiawhite.entity.EntityRemoveReason;
 import dev.sophiawhite.entity.Player;
 import dev.sophiawhite.logging.LogLevel;
 import dev.sophiawhite.logging.Logger;
@@ -25,7 +26,6 @@ public class MMOWebSocket {
 
     @OnOpen
     public void onOpen(Session session) {
-
     }
 
     @OnMessage
@@ -35,10 +35,10 @@ public class MMOWebSocket {
 
     @OnClose
     public void onClose(Session session) {
-        Player player = entityManager.getPlayerBySession(session);
-        if(player == null)
-            return;
-        entityManager.removeEntity(player);
+        synchronized(entityManager) {
+            Player player = entityManager.getPlayerBySession(session);
+            entityManager.removeEntity(player, EntityRemoveReason.PLAYER_LOGOUT);
+        }
     }
 
     @OnError

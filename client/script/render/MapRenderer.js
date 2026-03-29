@@ -98,29 +98,23 @@ export class MapRenderer {
 
     /**
      * 
-     * @returns Whether or not the canvases actually changed size. 
+     * @returns
      */
     #resizeCanvases = () => {
         if (!this.map)
-            return false;
+            return;
 
         const width = this.viewportCanvas.clientWidth;
         const height = this.viewportCanvas.clientHeight;
 
-        if (this.viewportCanvas.width !== width || this.viewportCanvas.height !== height) {
+        this.viewportCanvas.width = width;
+        this.viewportCanvas.height = height;
+        this.viewportCanvasContext.imageSmoothingEnabled = this.config.useImageSmoothing;
 
-            this.viewportCanvas.width = width;
-            this.viewportCanvas.height = height;
-            this.viewportCanvasContext.imageSmoothingEnabled = this.config.useImageSmoothing;
+        this.bufferCanvas.width = width + this.map.tileWidth * 2 * this.config.scaleFactor;
+        this.bufferCanvas.height = height + this.map.tileHeight * 2 * this.config.scaleFactor;
+        this.bufferCanvasContext.imageSmoothingEnabled = this.config.useImageSmoothing;
 
-
-            this.bufferCanvas.width = width + this.map.tileWidth * 2 * this.config.scaleFactor;
-            this.bufferCanvas.height = height + this.map.tileHeight * 2 * this.config.scaleFactor;
-            this.bufferCanvasContext.imageSmoothingEnabled = this.config.useImageSmoothing;
-
-            return true;
-        }
-        return false;
     }
 
     /**
@@ -239,7 +233,7 @@ export class MapRenderer {
      * Renders every background tile that is within the bounds described by the background tile buffer to the background tile buffer
      */
     #renderForegroundTiles = () => {
-        if(!this.map?.minimumForegroundLayer || !this.config.renderForeground)
+        if (!this.map?.minimumForegroundLayer || !this.config.renderForeground)
             return;
         this.bufferCanvasContext.save();
         this.bufferCanvasContext.globalAlpha = this.config.foregroundOpacity;
@@ -256,8 +250,8 @@ export class MapRenderer {
         const minVisibleTileX = this.camera.x - (this.getCanvasWidthInTiles() / 2);
         const minVisibleTileY = this.camera.y - (this.getCanvasHeightInTiles() / 2);
 
-        const sourceX = (minVisibleTileX - bufferMinTileX) * this.map.tileWidth * this.config.scaleFactor;;
-        const sourceY = (minVisibleTileY - bufferMinTileY) * this.map.tileHeight * this.config.scaleFactor;;
+        const sourceX = (minVisibleTileX - bufferMinTileX) * this.map.tileWidth * this.config.scaleFactor;
+        const sourceY = (minVisibleTileY - bufferMinTileY) * this.map.tileHeight * this.config.scaleFactor;
 
         this.viewportCanvasContext.clearRect(0, 0, this.viewportCanvas.width, this.viewportCanvas.height);
         this.viewportCanvasContext.drawImage(this.bufferCanvas, sourceX, sourceY, this.viewportCanvas.width, this.viewportCanvas.height, 0, 0, this.viewportCanvas.width, this.viewportCanvas.height);
@@ -294,7 +288,7 @@ export class MapRenderer {
     /**
      * Renders every background tile that is within the bounds described by the background tile buffer to the background tile buffer
      */
-    #renderEntitiesToBuffer = (timeMs) => {
+    #renderEntitiesToBuffer = () => {
         const { x: bufferMinTileX, y: bufferMinTileY } = this.#getBufferMinTilePosition();
         const { x: bufferMaxTileX, y: bufferMaxTileY } = this.#getBufferMaxTilePosition();
         const entities = entityManager.getEntities();
@@ -336,7 +330,7 @@ export class MapRenderer {
         this.viewportCanvasContext.save();
 
         const fontSize = 20;
-        const lineHeight = 35; 
+        const lineHeight = 35;
         const originX = 10;
         const originY = 10;
 
@@ -349,12 +343,47 @@ export class MapRenderer {
             `Entity count: ${entityManager.getEntityCount()}`
         ];
 
-        for(let i = 0; i < debugLines.length; i++) {
+        for (let i = 0; i < debugLines.length; i++) {
             const line = debugLines[i];
             this.viewportCanvasContext.fillText(line, originX, originY + (i * lineHeight));
         }
 
         this.viewportCanvasContext.restore();
+    }
+
+    #renderPlayerNames = () => {
+
+        const { x: bufferMinTileX, y: bufferMinTileY } = this.#getBufferMinTilePosition();
+        const { x: bufferMaxTileX, y: bufferMaxTileY } = this.#getBufferMaxTilePosition();
+        const entities = entityManager.getEntities();
+
+        const fontSize = 14 * this.config.scaleFactor;
+        this.bufferCanvasContext.save();
+        this.bufferCanvasContext.font = `bold ${fontSize}px Arial`;
+        this.bufferCanvasContext.fillStyle = '#f0f';
+        this.bufferCanvasContext.textAlign = "center";
+        this.bufferCanvasContext.textBaseline = "top";
+
+        for (const e of entities) {
+
+            const { x: visualX, y: visualY } = e.visualPosition;
+
+            const isVisible = visualX >= bufferMinTileX && visualX <= bufferMaxTileX && visualY >= bufferMinTileY && visualY <= bufferMaxTileY;
+            if (!isVisible)
+                continue;
+
+            const renderedTileWidth = this.map.tileWidth * this.config.scaleFactor;
+            const renderedTileHeight = this.map.tileHeight * this.config.scaleFactor;
+
+            const destinationX = Math.floor((visualX - bufferMinTileX) * renderedTileWidth) + 0.5 * renderedTileWidth;
+            const destinationY = Math.floor((visualY - bufferMinTileY) * renderedTileHeight) + renderedTileHeight + 5;
+
+            this.bufferCanvasContext.fillText(e.name, destinationX, destinationY);
+
+        }
+
+        this.bufferCanvasContext.restore();
+
     }
 
     /**
@@ -375,16 +404,20 @@ export class MapRenderer {
 
         this.camera.onFrame();
 
+
+
         //Prep work: clear buffer prior to re-render
         this.bufferCanvasContext.clearRect(0, 0, this.bufferCanvas.width, this.bufferCanvas.height);
 
         this.#renderBackgroundTiles();
 
-        this.#renderEntitiesToBuffer(timeMs);
+        this.#renderEntitiesToBuffer();
 
         this.#renderForegroundTiles();
 
         this.#renderTileOutlines();
+
+        this.#renderPlayerNames();
 
         this.#writeBufferToViewport();
 
@@ -416,6 +449,8 @@ export class MapRenderer {
 
     }
 
+
+
     /**
      * 
      * @param {MouseEvent} evt 
@@ -428,23 +463,42 @@ export class MapRenderer {
 
     onMouseClick = (evt) => {
 
-            const cameraPixelX = this.viewportCanvas.width / 2;
-            const cameraPixelY = this.viewportCanvas.height / 2;
+        const cameraPixelX = this.viewportCanvas.width / 2;
+        const cameraPixelY = this.viewportCanvas.height / 2;
 
-            const deltaPixelX = this.mouseX - cameraPixelX;
-            const deltaPixelY = this.mouseY - cameraPixelY;
+        const deltaPixelX = this.mouseX - cameraPixelX;
+        const deltaPixelY = this.mouseY - cameraPixelY;
 
-            const renderedTileWidth = this.map.tileWidth * this.config.scaleFactor;
-            const renderedTileHeight = this.map.tileHeight * this.config.scaleFactor;
+        const renderedTileWidth = this.map.tileWidth * this.config.scaleFactor;
+        const renderedTileHeight = this.map.tileHeight * this.config.scaleFactor;
 
-            const deltaTileX = deltaPixelX / renderedTileWidth;
-            const deltaTileY = deltaPixelY / renderedTileHeight;
+        const deltaTileX = deltaPixelX / renderedTileWidth;
+        const deltaTileY = deltaPixelY / renderedTileHeight;
 
-            const tileX = Math.floor(this.camera.x + deltaTileX);
-            const tileY = Math.floor(this.camera.y + deltaTileY);
-            
-            sendCommand(`move ${tileX} ${tileY}`);
+        const tileX = Math.floor(this.camera.x + deltaTileX);
+        const tileY = Math.floor(this.camera.y + deltaTileY);
+
+        sendCommand(`move ${tileX} ${tileY}`);
     }
+
+    /**
+     * 
+     * @param {MouseEvent} evt 
+     * @returns 
+     */
+    onWheel = (evt) => {
+        const minScaleFactor = 0.25;
+        const maxScaleFactor = 8;
+        const fraction = evt.deltaY > 0 ? 0.5 : 2;
+        const newScaleFactor = this.config.scaleFactor * fraction;
+        if (newScaleFactor > maxScaleFactor || newScaleFactor < minScaleFactor)
+            return;
+        this.config.scaleFactor *= fraction;
+        this.#resizeCanvases();
+
+    }
+
+    onContextMenu = (evt) => evt.preventDefault();
 
 }
 

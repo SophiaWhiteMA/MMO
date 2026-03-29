@@ -13,63 +13,62 @@ public class PropertyList {
         this.properties = properties;
     }
 
+    public PropertyList(){
+        this.properties = new ArrayList<>();
+    }
+
     public List<Property> getProperties(){
         return this.properties;
     }
 
     /**
      *
-     * @param properties Array OR single JSON object expected.
-     * @return List of all properties in the array, or the single property provided if input was not array.
+     * @param properties Array of Tiled properties
+     * @return List of all properties
      */
     public static PropertyList fromJson(JsonNode properties) {
-
         List<Property> output = new ArrayList<Property>();
-
-        if (properties.isArray()) {
-
-            for (JsonNode property : properties)
-                output.add(Property.singlePropertyFromJson(property));
-            return new PropertyList(output);
-
-        } else {
-            return new PropertyList(Property.fromJson(properties));
-        }
-
-
+        for (JsonNode property : properties)
+            output.add(Property.singlePropertyFromJson(property));
+        return new PropertyList(output);
     }
 
-    @SuppressWarnings("unchecked")
-    public <T> T getProperty(Class<T> classType, String key) {
-
+    public boolean getBoolean(String key) {
         for (Property property : this.properties) {
             if (property.getName().equals(key)) {
-                Object value = property.getValue();
+                String value = property.getValue();
+                return Boolean.parseBoolean(value);
+            }
+        }
+        return false;
+    }
 
-                if (classType.isInstance(value)) {
-                    return classType.cast(value);
-                }
-
-                if (value instanceof String strValue) {
-                    if (classType == Boolean.class || classType == boolean.class) {
-                        return (T) Boolean.valueOf(strValue);
-                    }
-                    if (classType == Integer.class || classType == int.class) {
-                        return (T) Integer.valueOf(strValue);
-                    }
-                    if (classType == Float.class || classType == float.class) {
-                        return (T) Float.valueOf(strValue);
-                    }
-                    if (classType == Double.class || classType == double.class) {
-                        return (T) Double.valueOf(strValue);
-                    }
-                }
-
-                // 3. Fallback: return null or throw an error if conversion isn't supported
-                return null;
+    public String getString(String key){
+        for (Property property : this.properties) {
+            if (property.getName().equals(key)) {
+                return property.getValue();
             }
         }
         return null;
     }
+
+    public int getInt(String key){
+        for (Property property : this.properties) {
+            if (property.getName().equals(key)) {
+                return Integer.parseInt(property.getValue());
+            }
+        }
+        return -1;
+    }
+
+    public double getDouble(String key){
+        for (Property property : this.properties) {
+            if (property.getName().equals(key)) {
+                return Double.parseDouble(property.getValue());
+            }
+        }
+        return -1;
+    }
+
 
 }

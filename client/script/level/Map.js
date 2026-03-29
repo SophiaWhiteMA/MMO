@@ -83,7 +83,7 @@ class Map {
         }
 
         
-        output.#layers = mapJson.layers.map(e => MapLayer.fromJson(e));
+        output.#layers = mapJson.layers.filter(e => e.type === 'tilelayer').map(e => MapLayer.fromJson(e));
 
         return output;
     }

@@ -6,7 +6,7 @@ export class EntityManager {
     #entities = [];
 
     
-    playerId = undefined;
+    playerId = null;
 
     constructor(){
         

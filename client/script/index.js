@@ -4,17 +4,11 @@ import mapRenderer from './render/MapRenderer.js';
 
 (async () => {
 
-    window.addEventListener('mousemove', (evt) => {
-        mapRenderer.onMouseMove(evt);
-    });
-
-    window.addEventListener('mouseout', evt => {
-        mapRenderer.onMouseLeave(evt);
-    })
-
-    window.addEventListener('click', evt => {
-        mapRenderer.onMouseClick(evt);
-    })
+    window.addEventListener('mousemove', mapRenderer.onMouseMove);
+    window.addEventListener('mouseout', mapRenderer.onMouseLeave);
+    window.addEventListener('click', mapRenderer.onMouseClick);
+    window.addEventListener('wheel', mapRenderer.onWheel);
+    window.addEventListener('contextmenu', mapRenderer.onContextMenu)
 
     await assetCache.initialize();
     networkInit();

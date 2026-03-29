@@ -28,6 +28,11 @@
          "id":963,
          "properties":[
                 {
+                 "name":"solid",
+                 "type":"bool",
+                 "value":true
+                }, 
+                {
                  "name":"test",
                  "type":"string",
                  "value":"foo"

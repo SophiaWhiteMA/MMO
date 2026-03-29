@@ -32,9 +32,9 @@ const onOpen = (evt) => {
  */
 export const init = () => {
     socket = socket = new WebSocket("ws://127.0.0.1:8080/ws/listener");
-    socket.onopen = onOpen;
+    socket.onopen = evt => onOpen(evt);
     socket.onmessage = (evt) => queuedCommands.push(evt.data);
-    socket.onerror = err => console.log(err);
+    socket.onerror = err => console.log("Error occurred: " + err);
     socket.onclose = (evt) => console.log("Closed connection.");
 }
 
@@ -44,6 +44,7 @@ export const init = () => {
  * @param {String} command 
  */
 const processInboundCommand = (command, timeMs) => {
+    console.log('Get command: ' + command);
     const splits = command.split(' ');
     //console.log(command);
     const label = splits.shift();
@@ -60,5 +61,6 @@ export const processQueuedInboundNetworkCommands = (timeMs) => {
 }
 
 export const sendCommand = (command) => {
+    console.log('Send command: ' + command)
     socket.send(command);
 }

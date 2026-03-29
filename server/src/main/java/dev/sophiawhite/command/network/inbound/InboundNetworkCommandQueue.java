@@ -17,12 +17,24 @@ public class InboundNetworkCommandQueue {
 
     }
 
-    public void enqueueCommand(String command, Session session){
-        this.inboundCommandQueue.add(new InboundNetworkCommandQueueItem(command, session));
+    /**
+     * Provides a thread safe method for enqueueing networking commands
+     * @param command
+     * @param session
+     */
+    public synchronized void enqueueCommand(String command, Session session){
+        synchronized(this.inboundCommandQueue) {
+            this.inboundCommandQueue.add(new InboundNetworkCommandQueueItem(command, session));
+        }
     }
 
+    /**
+     * Provides a thread safe method for de-queueing networking commands
+     */
     public InboundNetworkCommandQueueItem dequeueCommand(){
-        return this.inboundCommandQueue.poll();
+        synchronized(this.inboundCommandQueue) {
+            return this.inboundCommandQueue.poll();
+        }
     }
 
     public static InboundNetworkCommandQueue getInstance(){

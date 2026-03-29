@@ -8,7 +8,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.List;
 import java.util.ArrayList;
-import java.util.HashMap;
+import java.util.TreeMap;
 
 public class Map {
 
@@ -30,15 +30,17 @@ public class Map {
     private String version;
 
     private PropertyList propertyList;
-    private List<MapLayer> layers;
+    private List<MapTileLayer> layers;
     private java.util.Map<Integer, TileSet> tileSets; //Firstgid -> Tileset
+    private List<MapLink> mapLinks;
 
 
 
 
     private Map() {
-        this.layers = new ArrayList<MapLayer>();
-        this.tileSets = new HashMap<Integer, TileSet>();
+        this.layers = new ArrayList<MapTileLayer>();
+        this.tileSets = new TreeMap<>();
+        this.mapLinks = new ArrayList<>();
     }
 
     public static Map readFromPath(Path path) throws IOException {
@@ -57,8 +59,8 @@ public class Map {
         output.width = root.path("width").asInt();
         output.height = root.path("height").asInt();
 
-        output.tileWidth = root.path("tileWidth").asInt();
-        output.tileHeight = root.path("tileHeight").asInt();
+        output.tileWidth = root.path("tilewidth").asInt();
+        output.tileHeight = root.path("tileheight").asInt();
 
         output.infinite = root.path("infinite").asBoolean();
         output.compressionLevel = root.path("compressionlevel").asInt();
@@ -73,7 +75,9 @@ public class Map {
         output.version = root.path("version").asText();
 
         output.propertyList = PropertyList.fromJson(root.path("properties"));
-        output.layers = MapLayer.fromJson(root.path("layers"));
+
+        output.layers = MapTileLayer.fromJson(root.path("layers"));
+        output.mapLinks = MapLink.fromJson(output, root.path("layers"));
 
         for(JsonNode tileSetDescriptor: root.path("tilesets")) {
             int firstGid = tileSetDescriptor.path("firstgid").asInt();
@@ -89,7 +93,7 @@ public class Map {
 
     }
 
-    public List<MapLayer> getLayers(){
+    public List<MapTileLayer> getLayers(){
         return this.layers;
     }
 
@@ -158,16 +162,67 @@ public class Map {
     }
 
     public String getId(){
-        return this.propertyList.getProperty(String.class, "id");
+        return this.propertyList.getString("id");
     }
 
     public boolean isInstanced(){
-        return this.propertyList.getProperty(boolean.class, "instanced");
+        return this.propertyList.getBoolean("instanced");
     }
 
     public String getName(){
-        return this.propertyList.getProperty(String.class, "name");
+        return this.propertyList.getString("name");
 
+    }
+
+    public int getFirstGidFromGlobalTileId(int globalTileId){
+        for(int firstGid: this.tileSets.keySet()) {
+            if(globalTileId >= firstGid)
+                return firstGid;
+        }
+        return -1;
+    }
+
+    public TileSet getTileSetFromTileId (int globalId) {
+        for(int firstGid: this.tileSets.keySet()) {
+            if(globalId >= firstGid)
+                return this.tileSets.get(firstGid);
+        }
+        return null;
+    }
+
+    public Tile getTile(int x, int y, int z) {
+        MapTileLayer mapTileLayer = this.layers.get(z);
+        int globalTileId = mapTileLayer.getTileIdAtPosition(x, y);
+        if(globalTileId == -1)
+            return null;
+
+        TileSet tileSet = this.getTileSetFromTileId(globalTileId);
+        if(tileSet == null)
+            return null;
+        int firstGid = getFirstGidFromGlobalTileId(globalTileId);
+        int localTileId = globalTileId - firstGid;
+
+        return tileSet.getTileByLocalId(localTileId);
+
+    }
+
+    public List<MapLink> getMapLinks(){
+        return this.mapLinks;
+    }
+
+    /**
+     *
+     * @param tileX
+     * @param tileY
+     * @return Null if none found
+     */
+    public MapLink getMapLinkAt(int tileX, int tileY) {
+        for(MapLink mapLink: this.mapLinks) {
+            if(mapLink.getTileX() == tileX && mapLink.getTileY() == tileY) {
+                return mapLink;
+            }
+        }
+        return null;
     }
 
 }

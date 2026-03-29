@@ -2,8 +2,26 @@ import assetCache from "../assets/AssetCache.js";
 import SpriteSheet from "../assets/SpriteSheet.js";
 import Animation from "./Animation.js";
 
-import { TICK_INTERVAL } from "../constants/index.js";
-import mapRenderer from "../render/MapRenderer.js";
+function generateRandomName() {
+    const adjectives = [
+        "Swift", "Quiet", "Golden", "Frosty", "Misty", 
+        "Cunning", "Wild", "Brave", "Azure", "Sly", 
+        "Jolly", "Sharp", "Radiant", "Loyal", "Ancient", 
+        "Vivid", "Calm", "Lunar", "Solar", "Bold"
+    ];
+
+    const nouns = [
+        "Falcon", "River", "Shadow", "Mountain", "Wolf", 
+        "Storm", "Oak", "Panda", "Canyon", "Blade", 
+        "Glacier", "Fox", "Meadow", "Summit", "Archer", 
+        "Comet", "Voyager", "Forest", "Knight", "Eagle"
+    ];
+
+    // Helper to get random element
+    const getRandom = (arr) => arr[Math.floor(Math.random() * arr.length)];
+
+    return `${getRandom(adjectives)} ${getRandom(nouns)}`;
+}
 
 export default class Entity {
 
@@ -23,7 +41,7 @@ export default class Entity {
     #direction = 'NORTH;'
 
     /** @type {String} */
-    #name = "Default name";
+    name = generateRandomName();
 
     // An arbitrary data field. Used by subclasses to do things like store another player's worn equipment, their skills, etc
     /** @type {Object} */
@@ -95,14 +113,6 @@ export default class Entity {
             y: this.previousPosition.y + (yDelta * fraction)
         }
 
-    }
-
-    get name(){
-        return this.#name;
-    }
-
-    set name(name){
-        this.#name = name;
     }
 
     get attackable(){

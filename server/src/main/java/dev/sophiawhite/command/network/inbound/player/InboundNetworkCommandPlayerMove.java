@@ -2,6 +2,7 @@ package dev.sophiawhite.command.network.inbound.player;
 
 import dev.sophiawhite.command.network.inbound.InboundNetworkCommand;
 import dev.sophiawhite.entity.EntityManager;
+import dev.sophiawhite.entity.EntityMovementReason;
 import dev.sophiawhite.entity.Player;
 import jakarta.websocket.Session;
 
@@ -23,7 +24,6 @@ public class InboundNetworkCommandPlayerMove extends InboundNetworkCommand {
         Player player = entityManager.getPlayerBySession(session);
         int x = Integer.parseInt(args[0]);
         int y = Integer.parseInt(args[1]);
-        player.move(x, y);
-
+        player.beginPathfinding(x, y);
     }
 }
