@@ -44,9 +44,7 @@ export const init = () => {
  * @param {String} command 
  */
 const processInboundCommand = (command, timeMs) => {
-    console.log('Get command: ' + command);
     const splits = command.split(' ');
-    //console.log(command);
     const label = splits.shift();
     const _function = commandMap[label];
     _function(splits, timeMs);
@@ -60,7 +58,4 @@ export const processQueuedInboundNetworkCommands = (timeMs) => {
     }
 }
 
-export const sendCommand = (command) => {
-    console.log('Send command: ' + command)
-    socket.send(command);
-}
+export const sendCommand = (command) => socket.send(command);
