@@ -1,11 +1,12 @@
-import entityManager from "../entity/EntityManager.js";
-import Map from "../level/Map.js";
-import { sendCommand } from "../network/index.js";
+import entityManager from "../../entity/EntityManager.js";
+import Map from "../../level/Map.js";
+import { sendCommand } from "../../network/index.js";
 import Camera from "./Camera.js";
 import MapRendererConfig from "./MapRendererConfig.js";
+import GameInterface from "../GameInterface.js";
 
 
-export class MapRenderer {
+export default class MapRenderer extends GameInterface {
 
     /** @type {Map} */
     map;
@@ -22,8 +23,6 @@ export class MapRenderer {
     /** @type {CanvasRenderingContext2D} */
     bufferCanvasContext;
 
-    resizeObserver;
-
     /** @type {MapRendererConfig} */
     config;
 
@@ -36,6 +35,11 @@ export class MapRenderer {
     /** @type {Camera} */
     camera;
 
+    //Forces element to render every frame
+    _isStale = true;
+
+    _closeable = false;
+
     #averageFps = undefined;
 
     /** @type {Array<Number>} */
@@ -47,7 +51,7 @@ export class MapRenderer {
      */
     setMap(map) {
         this.map = map;
-        this.#resizeCanvases();
+        this.onWindowResize();
     }
 
     /**
@@ -60,47 +64,28 @@ export class MapRenderer {
 
     /**
      * 
-     * @param {Map} map 
+     * @param {GameInterface} parent 
      * @param {number} cameraX 
      * @param {number} cameraY 
      */
-    constructor(cameraX, cameraY) {
-
+    constructor(parent, cameraX, cameraY) {
+        super(parent);
         this.config = new MapRendererConfig(this);
-
-        this.camera = new Camera(this);
-
-        this.camera.x = cameraX;
-        this.camera.y = cameraY;
-
-        // Primary canvas that is actually visible and shown on screen.
+        this.camera = new Camera(this, cameraX, cameraY);
         this.viewportCanvas = document.getElementById('viewport-canvas');
         this.viewportCanvasContext = this.viewportCanvas.getContext('2d');
-
-        // Canvas we write everything to before displaying it to the real canvas. Slightly bigger than viewport canvas. 
         this.bufferCanvas = document.createElement('canvas');
         this.bufferCanvasContext = this.bufferCanvas.getContext('2d');
-
-        this.resizeObserver = new ResizeObserver(this.#resizeObserverMethod);
-        this.resizeObserver.observe(this.viewportCanvas);
-        this.camera = new Camera(this);
-
     }
 
-    #resizeObserverMethod = (entries) => {
-        for (const entry of entries) {
-            if (entry.target === this.viewportCanvas) {
-                this.#resizeCanvases()
-            }
-        }
-    }
+
 
 
     /**
      * 
      * @returns
      */
-    #resizeCanvases = () => {
+    onWindowResize() {
         if (!this.map)
             return;
 
@@ -122,7 +107,7 @@ export class MapRenderer {
      * @param {number} x 
      * @param {number} y 
      */
-    setCameraPosition = (x, y) => {
+    setCameraPosition(x, y) {
         this.camera.x = x;
         this.camera.y = y;
     }
@@ -171,7 +156,7 @@ export class MapRenderer {
      * @param {*} tileY 
      * @param {*} layerZ 
      */
-    #renderTileToCanvasContext = (canvasContext, tileX, tileY, layerZ) => {
+    #renderTileToCanvasContext(canvasContext, tileX, tileY, layerZ) {
 
         const tileBufferMinTileX = Math.floor(this.camera.x - (this.getCanvasWidthInTiles() / 2) - 1);
         const tileBufferMinTileY = Math.floor(this.camera.y - (this.getCanvasHeightInTiles() / 2) - 1);
@@ -198,7 +183,7 @@ export class MapRenderer {
      * @param {*} zTileMin 
      * @param {*} zTileMax 
      */
-    #renderTilesInRange = (canvasContext, xTileMin, xTileMax, yTileMin, yTileMax, zTileMin, zTileMax) => {
+    #renderTilesInRange(canvasContext, xTileMin, xTileMax, yTileMin, yTileMax, zTileMin, zTileMax) {
         for (let tileX = xTileMin; tileX <= xTileMax; tileX++) {
             for (let tileY = yTileMin; tileY <= yTileMax; tileY++) {
                 for (let tileZ = zTileMin; tileZ <= zTileMax; tileZ++) {
@@ -209,21 +194,25 @@ export class MapRenderer {
     }
 
     /** Represents the tile coordinate of the tile farthest to the top-left of the buffer canvas */
-    #getBufferMinTilePosition = () => ({
-        x: Math.floor(this.camera.x - (this.getCanvasWidthInTiles() / 2) - 1),
-        y: Math.floor(this.camera.y - (this.getCanvasHeightInTiles() / 2) - 1)
-    });
+    #getBufferMinTilePosition() {
+        return {
+            x: Math.floor(this.camera.x - (this.getCanvasWidthInTiles() / 2) - 1),
+            y: Math.floor(this.camera.y - (this.getCanvasHeightInTiles() / 2) - 1)
+        }
+    };
 
     /** Represents the tile coordinate of the tile farthest to the bottom-right of the buffer canvas */
-    #getBufferMaxTilePosition = () => ({
-        x: Math.floor(this.camera.x + this.getCanvasWidthInTiles() / 2 + 1),
-        y: Math.floor(this.camera.y + this.getCanvasHeightInTiles() / 2 + 1)
-    });
+    #getBufferMaxTilePosition() {
+        return {
+            x: Math.floor(this.camera.x + this.getCanvasWidthInTiles() / 2 + 1),
+            y: Math.floor(this.camera.y + this.getCanvasHeightInTiles() / 2 + 1)
+        }
+    }
 
     /**
      * Renders every background tile that is within the bounds described by the background tile buffer to the background tile buffer
      */
-    #renderBackgroundTiles = () => {
+    #renderBackgroundTiles() {
         const { x: bufferMinTileX, y: bufferMinTileY } = this.#getBufferMinTilePosition();
         const { x: bufferMaxTileX, y: bufferMaxTileY } = this.#getBufferMaxTilePosition();
         this.#renderTilesInRange(this.bufferCanvasContext, bufferMinTileX, bufferMaxTileX, bufferMinTileY, bufferMaxTileY, 0, (this.map?.minimumForegroundLayer ?? this.map.layers.length) - 1);
@@ -232,7 +221,7 @@ export class MapRenderer {
     /**
      * Renders every background tile that is within the bounds described by the background tile buffer to the background tile buffer
      */
-    #renderForegroundTiles = () => {
+    #renderForegroundTiles() {
         if (!this.map?.minimumForegroundLayer || !this.config.renderForeground)
             return;
         this.bufferCanvasContext.save();
@@ -243,7 +232,7 @@ export class MapRenderer {
         this.bufferCanvasContext.restore();
     }
 
-    #writeBufferToViewport = () => {
+    #writeBufferToViewport() {
 
         const { x: bufferMinTileX, y: bufferMinTileY } = this.#getBufferMinTilePosition();
 
@@ -263,13 +252,13 @@ export class MapRenderer {
         if (this.config.showTileOutlines)
             this.#renderGridLinesToCanvasContext(this.bufferCanvas);
 
-        if (this.config.highlightSelectedTile && this.mouseX !== undefined && this.mouseY !== undefined) {
+        if (this.config.highlightSelectedTile && this._mouseX !== undefined && this._mouseY !== undefined) {
 
             const cameraPixelX = this.viewportCanvas.width / 2;
             const cameraPixelY = this.viewportCanvas.height / 2;
 
-            const deltaPixelX = this.mouseX - cameraPixelX;
-            const deltaPixelY = this.mouseY - cameraPixelY;
+            const deltaPixelX = this._mouseX - cameraPixelX;
+            const deltaPixelY = this._mouseY - cameraPixelY;
 
             const renderedTileWidth = this.map.tileWidth * this.config.scaleFactor;
             const renderedTileHeight = this.map.tileHeight * this.config.scaleFactor;
@@ -288,7 +277,7 @@ export class MapRenderer {
     /**
      * Renders every background tile that is within the bounds described by the background tile buffer to the background tile buffer
      */
-    #renderEntitiesToBuffer = () => {
+    #renderEntitiesToBuffer () {
         const { x: bufferMinTileX, y: bufferMinTileY } = this.#getBufferMinTilePosition();
         const { x: bufferMaxTileX, y: bufferMaxTileY } = this.#getBufferMaxTilePosition();
         const entities = entityManager.getEntities();
@@ -308,7 +297,7 @@ export class MapRenderer {
     }
 
 
-    #calculateFps = (frameTimeDelta) => {
+    #calculateFps (frameTimeDelta) {
 
         if (this.#fpsEntries.length >= 60) {
             this.#fpsEntries.shift();
@@ -322,7 +311,7 @@ export class MapRenderer {
 
     }
 
-    #renderDebugMenu = () => {
+    #renderDebugMenu () {
 
         if (!this.config.renderDebugMenu)
             return;
@@ -351,7 +340,7 @@ export class MapRenderer {
         this.viewportCanvasContext.restore();
     }
 
-    #renderPlayerNames = () => {
+    #renderPlayerNames () {
 
         const { x: bufferMinTileX, y: bufferMinTileY } = this.#getBufferMinTilePosition();
         const { x: bufferMaxTileX, y: bufferMaxTileY } = this.#getBufferMaxTilePosition();
@@ -390,7 +379,7 @@ export class MapRenderer {
      * 
      * @param {number} timeMs 
      */
-    render = (timeMs) => {
+    render(timeMs) {
 
         entityManager.getEntities().forEach(e => e.updateVisualPosition(timeMs));
 
@@ -401,10 +390,6 @@ export class MapRenderer {
 
         if (!this.map)
             return;
-
-        this.camera.onFrame();
-
-
 
         //Prep work: clear buffer prior to re-render
         this.bufferCanvasContext.clearRect(0, 0, this.bufferCanvas.width, this.bufferCanvas.height);
@@ -426,48 +411,29 @@ export class MapRenderer {
 
     }
 
-    getCanvasWidthInTiles = () => {
+    getCanvasWidthInTiles() {
         return this.viewportCanvas.clientWidth / this.map.tileWidth / this.config.scaleFactor;
     }
 
-    getCanvasHeightInTiles = () => {
+    getCanvasHeightInTiles() {
         return this.viewportCanvas.clientHeight / this.map.tileHeight / this.config.scaleFactor;
     }
 
-    /**
-     * 
-     * @param {MouseEvent} evt 
-     */
-    onMouseMove = (evt) => {
-        const { clientX, clientY } = evt;
-        const rect = this.viewportCanvas.getBoundingClientRect();
-        const canvasPixelX = clientX - rect.left;
-        const canvasPixelY = clientY - rect.top;
-
-        this.mouseX = canvasPixelX;
-        this.mouseY = canvasPixelY;
-
-    }
-
 
 
     /**
      * 
-     * @param {MouseEvent} evt 
+     * @param {PointerEvent} evt 
      */
-    onMouseLeave = (evt) => {
-        //TODO: This is a little hacky, no? 
-        this.mouseX = -100;
-        this.mouseY = -100;
-    }
-
-    onMouseClick = (evt) => {
+    onMouseClick(evt) {
+        super.onMouseClick(evt);
+        this.getParent().setActiveChild(this);
 
         const cameraPixelX = this.viewportCanvas.width / 2;
         const cameraPixelY = this.viewportCanvas.height / 2;
 
-        const deltaPixelX = this.mouseX - cameraPixelX;
-        const deltaPixelY = this.mouseY - cameraPixelY;
+        const deltaPixelX = this._mouseX - cameraPixelX;
+        const deltaPixelY = this._mouseY - cameraPixelY;
 
         const renderedTileWidth = this.map.tileWidth * this.config.scaleFactor;
         const renderedTileHeight = this.map.tileHeight * this.config.scaleFactor;
@@ -483,10 +449,10 @@ export class MapRenderer {
 
     /**
      * 
-     * @param {MouseEvent} evt 
+     * @param {WheelEvent} evt 
      * @returns 
      */
-    onWheel = (evt) => {
+    onWheel(evt) {
         const minScaleFactor = 0.25;
         const maxScaleFactor = 8;
         const fraction = evt.deltaY > 0 ? 0.5 : 2;
@@ -494,16 +460,23 @@ export class MapRenderer {
         if (newScaleFactor > maxScaleFactor || newScaleFactor < minScaleFactor)
             return;
         this.config.scaleFactor *= fraction;
-        this.#resizeCanvases();
+        this.onWindowResize();
 
     }
 
-    onContextMenu = (evt) => evt.preventDefault();
+    /**
+     * 
+     * @param {PointerEvent} evt 
+     */
+    onContextMenu(evt){
+        evt.preventDefault();
+    }
+
+
+    getHtmlElement(){
+        return document.getElementById('viewport-canvas');
+    }
+
+
 
 }
-
-
-/** @type {MapRenderer} */
-const mapRenderer = new MapRenderer(0, 0);
-
-export default mapRenderer;

@@ -1,5 +1,5 @@
 import assetCache from "../../assets/AssetCache.js";
-import mapRenderer from "../../render/MapRenderer.js";
+import { mapRenderer } from "../../gameInterface/index.js";
 
 /**
  * 

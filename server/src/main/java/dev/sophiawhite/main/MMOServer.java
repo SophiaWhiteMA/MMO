@@ -13,6 +13,8 @@ import dev.sophiawhite.tasks.TaskManager;
 import jakarta.websocket.DeploymentException;
 import org.glassfish.tyrus.server.Server;
 
+import java.util.logging.LogManager;
+
 public class MMOServer implements Runnable {
 
     private static MMOServer instance;
@@ -23,7 +25,7 @@ public class MMOServer implements Runnable {
     private final TaskManager taskManager = TaskManager.getInstance();
 
     public static void main(String[] args) throws DeploymentException {
-        //LogManager.getLogManager().reset(); //makes the logger shut the fuck up
+        LogManager.getLogManager().reset(); //makes the logger shut the fuck up
         instance = new MMOServer();
         new Thread(instance).start();
     }
