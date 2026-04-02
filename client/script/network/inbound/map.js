@@ -13,7 +13,8 @@ const map = (args) => {
                 const mapId = args[1];
                 const _map = assetCache.getMapById(mapId);
                 mapRenderer.setMap(_map);
-                mapRenderer.setCameraPosition(_map.width / 2, _map.height / 2);
+                mapRenderer.camera.x = map.width / 2;
+                mapRenderer.camera.y = map.height / 2;
             break;
     }
 

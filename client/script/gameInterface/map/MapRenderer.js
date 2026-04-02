@@ -4,6 +4,8 @@ import { sendCommand } from "../../network/index.js";
 import Camera from "./Camera.js";
 import MapRendererConfig from "./MapRendererConfig.js";
 import GameInterface from "../GameInterface.js";
+import { chatInterface } from "../index.js";
+import { move as playerMove} from "../../network/outbound/player.js";
 
 
 export default class MapRenderer extends GameInterface {
@@ -35,11 +37,14 @@ export default class MapRenderer extends GameInterface {
     /** @type {Camera} */
     camera;
 
-    //Forces element to render every frame
-    _isStale = true;
 
+    /** @type {Boolean} */
+    _isStale = true; //Superclass property; hard-coded value of true forces interface to render every frame
+    
+    /** @type {Boolean} */
     _closeable = false;
 
+    /** @type {Number | undefined} */
     #averageFps = undefined;
 
     /** @type {Array<Number>} */
@@ -79,11 +84,9 @@ export default class MapRenderer extends GameInterface {
     }
 
 
-
-
     /**
+     * Superclass method. Triggers when global window is resized.
      * 
-     * @returns
      */
     onWindowResize() {
         if (!this.map)
@@ -103,17 +106,7 @@ export default class MapRenderer extends GameInterface {
     }
 
     /**
-     * Abruptly positions the camera to the given coordinate. 
-     * @param {number} x 
-     * @param {number} y 
-     */
-    setCameraPosition(x, y) {
-        this.camera.x = x;
-        this.camera.y = y;
-    }
-
-    /**
-     * Renders the outline of a tile to a canvas context. 
+     * Renders the outline of a tile to the buffer canvas context provided tile coordinates and styling information as input.
      * @param {CanvasRenderingContext2D} canvasContext 
      * @param {string} strokeStyle 
      * @param {string} lineWidth 
@@ -135,7 +128,7 @@ export default class MapRenderer extends GameInterface {
     }
 
     /**
-     * Renders tile outlines to a canvas context for *every* visible tile
+     * Renders tile outlines to the context of the buffer canvas for *every* visible tile
      * @param {CanvasRenderingContext2D} canvasContext 
      */
     #renderGridLinesToCanvasContext(canvasContext) {
@@ -149,24 +142,19 @@ export default class MapRenderer extends GameInterface {
     }
 
     /**
-     * Renders a tile to a Canvas using it's CanvasContext. It is assumed that the Canvas being draw on
-     * is the buffer canvas rather than the viewport canvas. 
+     * Locates and renders the tile found at (tileX, tileY, tileZ) of the currently loaded map
+     * using the context of the buffer canvas. 
      * @param {*} canvasContext 
      * @param {*} tileX 
      * @param {*} tileY 
      * @param {*} layerZ 
      */
-    #renderTileToCanvasContext(canvasContext, tileX, tileY, layerZ) {
-
+    #renderTileToBufferCanvasContext(canvasContext, tileX, tileY, layerZ) {
         const tileBufferMinTileX = Math.floor(this.camera.x - (this.getCanvasWidthInTiles() / 2) - 1);
         const tileBufferMinTileY = Math.floor(this.camera.y - (this.getCanvasHeightInTiles() / 2) - 1);
-
-
         const tile = this.map.getTileAtPosition(tileX, tileY, layerZ);
-
         const destinationX = (tileX - tileBufferMinTileX) * this.map.tileWidth * this.config.scaleFactor;
         const destinationY = (tileY - tileBufferMinTileY) * this.map.tileHeight * this.config.scaleFactor;
-
         if (tile !== null) {
             const { x: spriteSheetX, y: spriteSheetY } = tile.tileSet.spriteSheet.getSpriteSheetCoordinates(tile.id);
             tile.tileSet.spriteSheet.drawToCanvasContext(canvasContext, spriteSheetX, spriteSheetY, destinationX, destinationY, this.config.scaleFactor);
@@ -175,25 +163,28 @@ export default class MapRenderer extends GameInterface {
 
     /**
      * 
-     * @param {*} canvasContext 
+     * @param {CanvasRenderingContext2D} canvasContext 
      * @param {number} xTileMin 
-     * @param {number} xTileMax 
+     * @param {Number} xTileMax 
      * @param {number} yTileMin 
-     * @param {*} yTileMax 
-     * @param {*} zTileMin 
-     * @param {*} zTileMax 
+     * @param {Number} yTileMax 
+     * @param {Number} zTileMin 
+     * @param {Number} zTileMax 
      */
     #renderTilesInRange(canvasContext, xTileMin, xTileMax, yTileMin, yTileMax, zTileMin, zTileMax) {
         for (let tileX = xTileMin; tileX <= xTileMax; tileX++) {
             for (let tileY = yTileMin; tileY <= yTileMax; tileY++) {
                 for (let tileZ = zTileMin; tileZ <= zTileMax; tileZ++) {
-                    this.#renderTileToCanvasContext(canvasContext, tileX, tileY, tileZ);
+                    this.#renderTileToBufferCanvasContext(canvasContext, tileX, tileY, tileZ);
                 }
             }
         }
     }
 
-    /** Represents the tile coordinate of the tile farthest to the top-left of the buffer canvas */
+    /**
+     * Represents the tile coordinate of the tile farthest to the top-left of the buffer canvas
+     * @returns {{x: Number, y: Number}}
+     */
     #getBufferMinTilePosition() {
         return {
             x: Math.floor(this.camera.x - (this.getCanvasWidthInTiles() / 2) - 1),
@@ -201,7 +192,10 @@ export default class MapRenderer extends GameInterface {
         }
     };
 
-    /** Represents the tile coordinate of the tile farthest to the bottom-right of the buffer canvas */
+    /**
+     * Represents the tile coordinate of the tile farthest to the bottom-right of the buffer canvas
+     * @returns {{x: Number, y: Number}}
+     */
     #getBufferMaxTilePosition() {
         return {
             x: Math.floor(this.camera.x + this.getCanvasWidthInTiles() / 2 + 1),
@@ -210,7 +204,7 @@ export default class MapRenderer extends GameInterface {
     }
 
     /**
-     * Renders every background tile that is within the bounds described by the background tile buffer to the background tile buffer
+     * Renders every background tile that is within the bounds of the buffer canvas to said canvas
      */
     #renderBackgroundTiles() {
         const { x: bufferMinTileX, y: bufferMinTileY } = this.#getBufferMinTilePosition();
@@ -219,7 +213,7 @@ export default class MapRenderer extends GameInterface {
     }
 
     /**
-     * Renders every background tile that is within the bounds described by the background tile buffer to the background tile buffer
+     * Renders every foreground tile that is within the bounds of the buffer canvas to said canvas
      */
     #renderForegroundTiles() {
         if (!this.map?.minimumForegroundLayer || !this.config.renderForeground)
@@ -277,7 +271,7 @@ export default class MapRenderer extends GameInterface {
     /**
      * Renders every background tile that is within the bounds described by the background tile buffer to the background tile buffer
      */
-    #renderEntitiesToBuffer () {
+    #renderEntitiesToBuffer() {
         const { x: bufferMinTileX, y: bufferMinTileY } = this.#getBufferMinTilePosition();
         const { x: bufferMaxTileX, y: bufferMaxTileY } = this.#getBufferMaxTilePosition();
         const entities = entityManager.getEntities();
@@ -297,7 +291,7 @@ export default class MapRenderer extends GameInterface {
     }
 
 
-    #calculateFps (frameTimeDelta) {
+    #calculateFps(frameTimeDelta) {
 
         if (this.#fpsEntries.length >= 60) {
             this.#fpsEntries.shift();
@@ -311,7 +305,7 @@ export default class MapRenderer extends GameInterface {
 
     }
 
-    #renderDebugMenu () {
+    #renderDebugMenu() {
 
         if (!this.config.renderDebugMenu)
             return;
@@ -340,7 +334,7 @@ export default class MapRenderer extends GameInterface {
         this.viewportCanvasContext.restore();
     }
 
-    #renderPlayerNames () {
+    #renderPlayerNames() {
 
         const { x: bufferMinTileX, y: bufferMinTileY } = this.#getBufferMinTilePosition();
         const { x: bufferMaxTileX, y: bufferMaxTileY } = this.#getBufferMaxTilePosition();
@@ -375,39 +369,87 @@ export default class MapRenderer extends GameInterface {
 
     }
 
+    #renderChatMessages() {
+
+        const now = new Date();
+        const recentChatMessages = chatInterface.chatMessages.filter(e => (now.valueOf() - e.timeStamp.valueOf()) <= e.duration);
+
+        if(recentChatMessages.length <= 0)
+            return;
+
+        const fontSize = 14 * this.config.scaleFactor;
+        this.bufferCanvasContext.save();
+        this.bufferCanvasContext.font = `bold ${fontSize}px Arial`;
+        this.bufferCanvasContext.fillStyle = 'yellow';
+        this.bufferCanvasContext.textAlign = "center";
+        this.bufferCanvasContext.strokeStyle = 'black';
+        this.bufferCanvasContext.lineWidth = fontSize / 8;
+
+        const { x: bufferMinTileX, y: bufferMinTileY } = this.#getBufferMinTilePosition();
+        const { x: bufferMaxTileX, y: bufferMaxTileY } = this.#getBufferMaxTilePosition();
+
+        // Every time we render a chat message, we store the current (visual) position of the entity
+        // that authored it here. We use this to track how many chat messages originated from each location
+        // allowing us to visually stagger messages when more than one message originates from the same position
+        const chatMessagePositions = [];
+
+        for (const chatMessage of recentChatMessages) {
+
+            const author = entityManager.getEntityById(chatMessage.entityId);
+            if (!author)
+                continue;
+
+            const { x: visualX, y: visualY } = author.visualPosition;
+            const isVisible = visualX >= bufferMinTileX && visualX <= bufferMaxTileX && visualY >= bufferMinTileY && visualY <= bufferMaxTileY;
+            if (!isVisible)
+                continue;
+
+            const renderedTileWidth = this.map.tileWidth * this.config.scaleFactor;
+            const renderedTileHeight = this.map.tileHeight * this.config.scaleFactor;
+
+            const existingPositions = chatMessagePositions.filter(e => e.x == visualX && e.y == visualY);
+            if (existingPositions.length >= 5)
+                continue;
+
+            const textMetrics = this.bufferCanvasContext.measureText(chatMessage.content);
+            const destinationX = Math.floor((visualX - bufferMinTileX) * renderedTileWidth) + 0.5 * renderedTileWidth;
+            const destinationY = Math.floor((visualY - bufferMinTileY) * renderedTileHeight) - renderedTileHeight - 5 - (existingPositions.length * (textMetrics.fontBoundingBoxAscent + textMetrics.fontBoundingBoxDescent) * 1.5);
+
+            this.bufferCanvasContext.strokeText(chatMessage.content, destinationX, destinationY);
+            this.bufferCanvasContext.fillText(chatMessage.content, destinationX, destinationY);
+            chatMessagePositions.push({ x: visualX, y: visualY })
+
+        }
+
+        this.bufferCanvasContext.restore();
+
+    }
+
     /**
      * 
      * @param {number} timeMs 
      */
     render(timeMs) {
 
-        entityManager.getEntities().forEach(e => e.updateVisualPosition(timeMs));
-
-        const frameTimeDelta = timeMs - this.currentFrameTimeMs;
-        this.currentFrameTimeMs = timeMs;
-
-        this.#calculateFps(frameTimeDelta);
+        entityManager.getEntities().forEach(e => e.updateVisualPosition(timeMs)); //Should this really be in the render loop? 
 
         if (!this.map)
             return;
 
         //Prep work: clear buffer prior to re-render
         this.bufferCanvasContext.clearRect(0, 0, this.bufferCanvas.width, this.bufferCanvas.height);
-
         this.#renderBackgroundTiles();
-
         this.#renderEntitiesToBuffer();
-
         this.#renderForegroundTiles();
-
         this.#renderTileOutlines();
-
         this.#renderPlayerNames();
-
+        this.#renderChatMessages();
         this.#writeBufferToViewport();
 
-        // the positioning of the debug test is relative to the viewport, so we render it after copying the buffer to the viewport. 
-        this.#renderDebugMenu();
+        const frameTimeDelta = timeMs - this.currentFrameTimeMs;
+        this.currentFrameTimeMs = timeMs;
+        this.#calculateFps(frameTimeDelta);
+        this.#renderDebugMenu();  // the positioning of the debug menu is relative to the viewport, so we render it after copying the buffer to the viewport. 
 
     }
 
@@ -444,7 +486,7 @@ export default class MapRenderer extends GameInterface {
         const tileX = Math.floor(this.camera.x + deltaTileX);
         const tileY = Math.floor(this.camera.y + deltaTileY);
 
-        sendCommand(`move ${tileX} ${tileY}`);
+        playerMove(tileX, tileY);
     }
 
     /**
@@ -468,12 +510,12 @@ export default class MapRenderer extends GameInterface {
      * 
      * @param {PointerEvent} evt 
      */
-    onContextMenu(evt){
+    onContextMenu(evt) {
         evt.preventDefault();
     }
 
 
-    getHtmlElement(){
+    getHtmlElement() {
         return document.getElementById('viewport-canvas');
     }
 
