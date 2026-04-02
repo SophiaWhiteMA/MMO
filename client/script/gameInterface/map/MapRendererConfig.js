@@ -3,7 +3,7 @@ export default class MapRendererConfig {
     mapRenderer;
 
     #scaleFactor = 1;
-    #foregroundOpacity = 0.5;
+    #foregroundOpacity = 1;
 
     #useImageSmoothing = false;
 

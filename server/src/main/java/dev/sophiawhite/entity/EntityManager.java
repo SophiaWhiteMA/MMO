@@ -75,6 +75,7 @@ public class EntityManager {
         } else {
            e.move(x, y, moveReason);
         }
+        e.getEntityPathfinder().clearPath();
     }
 
     /**

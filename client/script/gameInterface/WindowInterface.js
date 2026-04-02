@@ -17,6 +17,8 @@ export default class WindowInterface extends GameInterface {
     /** @type {HTMLElement} */
     body;
 
+    barLastClicked = 0;
+
     set title(title){
         this._title = title;
         if(this.dragBar) {
@@ -94,12 +96,35 @@ export default class WindowInterface extends GameInterface {
             return;
         if(evt.target === this.dragBar || (this.dragBar.contains(evt.target) && evt.target != this.closeButton) ) {
             this.dragging = true;
+            const timeStamp = new Date().valueOf();
+            if(timeStamp - this.barLastClicked < 250) {
+                const existingSize = this.getSize();
+                const existingPosition = this.getScalarCoordinates();
+                if(existingSize.width == 1 && existingSize.height == 1) {
+
+                    if(this._oldSize) {
+                        this.setSize(this._oldSize.width, this._oldSize.height);
+                        this.setPositionRelativeToParent(this._oldPosition.x, this._oldPosition.y);
+                    } else {
+                        this.setSize(0.5, 0.5);
+                        this.setPositionRelativeToParent(0, 0);
+                    }
+
+                } else {
+                    this._oldSize = existingSize;
+                    this._oldPosition = existingPosition;
+                    this.setSize(1, 1);
+                    this.setPositionRelativeToParent(0, 0);
+                }
+                
+            }
+            this.barLastClicked = timeStamp;
         }
-        if (this._mouseX >= (this.getWidth() - RESIZE_MARGIN - 1) && this._mouseY >= (this.getHeight() - RESIZE_MARGIN - 1)) {
+        if (this._mouseX >= (this.getPixelWidth() - RESIZE_MARGIN - 1) && this._mouseY >= (this.getPixelHeight() - RESIZE_MARGIN - 1)) {
             this._resizeMode = 'SOUTHEAST';
-        } else if (this._mouseY >= (this.getHeight() - RESIZE_MARGIN - 1)) {
+        } else if (this._mouseY >= (this.getPixelHeight() - RESIZE_MARGIN - 1)) {
             this._resizeMode = 'SOUTH';
-        } else if (this._mouseX >= (this.getWidth() - RESIZE_MARGIN - 1)) {
+        } else if (this._mouseX >= (this.getPixelWidth() - RESIZE_MARGIN - 1)) {
             this._resizeMode = 'EAST';
         } else {
             this._resizeMode = 'NONE';
@@ -121,11 +146,11 @@ export default class WindowInterface extends GameInterface {
 
     getCursorStyle() {
 
-        if (this._mouseX >= (this.getWidth() - RESIZE_MARGIN - 1) && this._mouseY >= (this.getHeight() - RESIZE_MARGIN - 1)) {
+        if (this._mouseX >= (this.getPixelWidth() - RESIZE_MARGIN - 1) && this._mouseY >= (this.getPixelHeight() - RESIZE_MARGIN - 1)) {
             return 'se-resize';
-        } else if (this._mouseY >= (this.getHeight() - RESIZE_MARGIN - 1)) {
+        } else if (this._mouseY >= (this.getPixelHeight() - RESIZE_MARGIN - 1)) {
             return 's-resize';
-        } else if (this._mouseX >= (this.getWidth() - RESIZE_MARGIN - 1)) {
+        } else if (this._mouseX >= (this.getPixelWidth() - RESIZE_MARGIN - 1)) {
             return 'e-resize'
         } else {
             return 'default';
@@ -170,15 +195,31 @@ export default class WindowInterface extends GameInterface {
             this.translate(evt.movementX, evt.movementY);
         }
 
-        const { width, height } = this.getSize();
+        const rect = this.getHtmlElement().getBoundingClientRect();
+        const parentRect = this.getHtmlElement().parentElement.getBoundingClientRect();
+        
 
         if (this._resizeMode == 'SOUTHEAST') {
-            this.setSize(width + evt.movementX, height + evt.movementY);
-        } else if (this._resizeMode == 'SOUTH') {
+            const scalarX = (rect.width + evt.movementX) / parentRect.width
+            const scalarY = (rect.height + evt.movementY) / parentRect.height
+            this.setSize(scalarX, scalarY);
+        } else if (this._resizeMode === 'SOUTH') {
+            const scalarX = this.scalarX;
+            const scalarY = (rect.height + evt.movementY) / parentRect.height
+            this.setSize(scalarX, scalarY);
+        } else if (this._resizeMode === 'EAST') {
+            const scalarX = (rect.width + evt.movementX) / parentRect.width
+            const scalarY = this.scalarY;
+            this.setSize(scalarX, scalarY);
+        }
+
+        /**
+         *  else if (this._resizeMode == 'SOUTH') {
             this.setSize(width, height + evt.movementY);
         } else if (this._resizeMode == 'EAST') {
             this.setSize(width + evt.movementX, height);
         }
+         */
     }
 
 

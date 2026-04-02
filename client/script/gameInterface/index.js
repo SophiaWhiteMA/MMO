@@ -1,27 +1,17 @@
+import ChatInterface from "./ChatInterface.js";
 import GameInterface from "./GameInterface.js";
 import MapRenderer from "./map/MapRenderer.js";
-import WindowInterface from "./WindowInterface.js";
 
 const rootInterface = new GameInterface();
+rootInterface.setSize(1, 1);
 
 const mapRenderer = new MapRenderer(rootInterface, 0, 0);
+mapRenderer.setSize(1, 1)
 
 
-const childOne = new WindowInterface(rootInterface);
-childOne._parent = rootInterface;
-childOne.setSize(1500, 500);
-childOne.title = 'Child 1'
-
-const child2 = new WindowInterface(childOne);
-child2.title = 'Child 2';
-child2.setSize(250, 250);
-child2.setPositionRelativeToParent(100, 100);
-
-const child3 = new WindowInterface(childOne);
-child3.title = 'Child 3';
-child3.setSize(400, 200);
-child3.setPositionRelativeToParent(375, 100);
-
+const chatInterface = new ChatInterface(rootInterface);
+chatInterface.setSize(0.3, 0.25)
+chatInterface.setPositionRelativeToParent(0, 0.75);
 
 document.getElementById('root').addEventListener('mouseleave', (evt) => {
     rootInterface._mouseDown = false;
@@ -40,5 +30,6 @@ window.addEventListener('resize', (evt) => rootInterface.onWindowResize(evt));
 
 export {
     rootInterface,
-    mapRenderer
+    mapRenderer,
+    chatInterface
 }

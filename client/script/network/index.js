@@ -1,5 +1,6 @@
 import map from "./inbound/map.js";
 import entity from "./inbound/entity.js";
+import chat from './inbound/chat.js';
 
 const queuedCommands = [];
 
@@ -14,7 +15,8 @@ let socket;
  */
 const commandMap = {
     'map': map,
-    'entity': entity
+    'entity': entity,
+    'chat': chat
 }
 
 

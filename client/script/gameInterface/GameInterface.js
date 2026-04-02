@@ -24,17 +24,18 @@ export default class GameInterface {
 
     /** @type {Number} The Y coordinate where the mouse was when it started to be held down, relative to this Interface's underlying HTML element's origin */
     _mouseDownY = 0;
-    
+
     /** @type {Number} The x coordinate where the mouse is currently relative to this Interface's underlying HTML element's origin */
     _mouseX = 0;
     _mouseY = 0;
-    
+
     _children = [];
     _activeChild = null;
     _closeable = false;
     _zIndex = 1;
     _isActive = false;
-    _scalarPosition = {x: 0.333, y: 0.333}
+    _scalarPosition = { x: 0, y: 0 }
+    _scalarSize = { width: 0.5, height: 0.5 };
 
     /**
      * 
@@ -42,7 +43,7 @@ export default class GameInterface {
      */
     constructor(parent) {
         this._parent = parent;
-        if(parent)
+        if (parent)
             parent.addChild(this);
         this.setPositionRelativeToParent(0, 0);
         this.registerEventListeners();
@@ -73,10 +74,23 @@ export default class GameInterface {
     }
 
     getSize() {
+        return this._scalarSize;
+    }
+
+    getPixelSize() {
         return {
             width: this.getHtmlElement().clientWidth,
             height: this.getHtmlElement().clientHeight
         }
+    }
+
+    getPixelWidth() {
+        return this.getPixelSize().width
+    }
+
+
+    getPixelHeight() {
+        return this.getPixelSize().height
     }
 
     getWidth() {
@@ -87,21 +101,42 @@ export default class GameInterface {
         return this.getSize().height;
     }
 
-    setSize(newWidth, newHeight) {
+    setSize(scalarWidth, scalarHeight) {
         const htmlElement = this.getHtmlElement();
-        const { width: oldWidth, height: oldHeight} = this.getSize();
-        if((oldWidth == newWidth && oldHeight == newHeight) || !htmlElement)
-            return;
+        const parentElement = htmlElement.parentElement;
+        const parentRect = parentElement.getBoundingClientRect();
+        const oldWidth = parentRect.width;
+        const oldHeight = parentRect.height;
+        const newWidth = Math.floor(scalarWidth * parentRect.width);
+        const newHeight = Math.floor(scalarHeight * parentRect.height);
+        this._scalarSize = { width: scalarWidth, height: scalarHeight };
         htmlElement.style.width = newWidth + "px";
         htmlElement.style.height = newHeight + "px";
         this.onResize(oldWidth, oldHeight, newWidth, newHeight);
     }
 
     onResize(oldWidth, oldHeight, newWidth, newHeight) {
-        for(const child of this._children) {
-            child.setPositionRelativeToParent()
+        for (const child of this._children) {
+            const scalarCoordinates = child.getScalarCoordinates();
+            const scalarSize = child.getSize();
+            child.setPositionRelativeToParent(scalarCoordinates.x, scalarCoordinates.y);
+            child.setSize(scalarSize.width, scalarSize.height);
         }
     }
+
+    onWindowResize(evt) {
+
+        const scalarSize = this.getSize();
+        this.setSize(scalarSize.width, scalarSize.height);
+        for (const child of this._children) {
+            const scalarCoordinates = child.getScalarCoordinates();
+            const scalarSize = child.getSize();
+            child.setSize(scalarSize.width, scalarSize.height);
+            child.setPositionRelativeToParent(scalarCoordinates.x, scalarCoordinates.y);
+        }
+        this.getChildren().forEach(e => e.onWindowResize(evt))
+    }
+
 
 
     /**
@@ -109,7 +144,7 @@ export default class GameInterface {
      * @param {MouseEvent} evt 
      */
     onMouseDown(evt) {
-        if(!this.getHtmlElement().contains(evt.target))
+        if (!this.getHtmlElement().contains(evt.target))
             return;
         this._mouseDown = true;
         const rect = this.getHtmlElement().getBoundingClientRect();
@@ -139,7 +174,7 @@ export default class GameInterface {
      * @param {PointerEvent} evt 
      */
     onMouseClick(evt) {
-        if(!this.getHtmlElement().contains(evt.target))
+        if (!this.getHtmlElement().contains(evt.target))
             return;
         const parent = this.getParent();
         if (parent)
@@ -151,8 +186,8 @@ export default class GameInterface {
      * @param {MouseEvent} evt 
      */
     onMouseEnter(evt) {
-    if(!this.getHtmlElement().contains(evt.target))
-        return;
+        if (!this.getHtmlElement().contains(evt.target))
+            return;
     }
 
     /**
@@ -160,7 +195,7 @@ export default class GameInterface {
      * @param {MouseEvent} evt 
      */
     onMouseMove(evt) {
-        if(!this.getHtmlElement().contains(evt.target))
+        if (!this.getHtmlElement().contains(evt.target))
             return;
         const { clientX, clientY } = evt;
         const rect = this.getHtmlElement().getBoundingClientRect();
@@ -174,7 +209,7 @@ export default class GameInterface {
      * @param {MouseEvent} evt 
      */
     onMouseLeave(evt) {
-        if(!this.getHtmlElement().contains(evt.target))
+        if (!this.getHtmlElement().contains(evt.target))
             return;
         this._mouseX = -100;
         this._mouseY = -100;
@@ -200,7 +235,7 @@ export default class GameInterface {
         const activeChild = this.getActiveChild();
         if (activeChild) {
             activeChild.onKeyDown(evt);
-        } else if(evt.key === config.keyBindings.interface.close) {
+        } else if (evt.key === config.keyBindings.interface.close) {
             this.close();
         }
 
@@ -266,29 +301,29 @@ export default class GameInterface {
         return this._zIndex;
     }
 
-    close(){
-        if(this._closeable == true) {
+    close() {
+        if (this._closeable == true) {
             this.getHtmlElement().style.visibility = 'hidden';
             const parent = this.getParent();
-            if(parent)
+            if (parent)
                 parent.setActiveChild(null);
         }
     }
 
-    open(){
+    open() {
         this.getHtmlElement().style.visibility = 'visible';
     }
 
-    onWindowResize(evt) {
-        this.getChildren().forEach(e => e.onWindowResize(evt))
-    }
 
-    setPositionRelativeToParent(x, y) {
+    setPositionRelativeToParent(scalarX, scalarY) {
         const element = this.getHtmlElement();
         if (!element)
             return;
-        element.style.left = x + "px";
-        element.style.top = y + "px";
+        const parentElement = element.parentElement;
+        const parentRect = parentElement.getBoundingClientRect();
+        element.style.left = Math.floor(scalarX * parentRect.width) + "px";
+        element.style.top = Math.floor(scalarY * parentRect.height) + "px";
+        this._scalarPosition = { x: scalarX, y: scalarY };
     }
 
     getPositionRelativeToParent() {
@@ -300,27 +335,35 @@ export default class GameInterface {
         return { x, y }
     }
 
+    getScalarCoordinates() {
+        return this._scalarPosition;
+    }
+
+    /**
+     * Translates the interface a set number of pixels
+     * @param {*} deltaX 
+     * @param {*} deltaY 
+     */
     translate(deltaX, deltaY) {
         const { x, y } = this.getPositionRelativeToParent();
         const rect = this.getHtmlElement().getBoundingClientRect();
         let newOriginX = x + deltaX;
         let newOriginY = y + deltaY;
-        if(newOriginX < 0) newOriginX = 0;
-        if(newOriginY < 0) newOriginY = 0;
-        const parent = this.getParent();
-        if(parent) {
-            /** @type {HTMLElement} */
-            const parentRect = this.getHtmlElement().parentElement.getBoundingClientRect();
+        if (newOriginX < 0) newOriginX = 0;
+        if (newOriginY < 0) newOriginY = 0;
 
-            const overflowX = (newOriginX + rect.width) - parentRect.width
-            if(overflowX > 0)
-                newOriginX -= overflowX;
-            const overflowY = (newOriginY + rect.height) - parentRect.height;
-            if(overflowY > 0)
-                newOriginY -= overflowY;
-        }
+        /** @type {HTMLElement} */
+        const parentRect = this.getHtmlElement().parentElement.getBoundingClientRect();
 
-        this.setPositionRelativeToParent(newOriginX, newOriginY);
+        const overflowX = (newOriginX + rect.width) - parentRect.width
+        if (overflowX > 0)
+            newOriginX -= overflowX;
+        const overflowY = (newOriginY + rect.height) - parentRect.height;
+        if (overflowY > 0)
+            newOriginY -= overflowY;
+
+
+        this.setPositionRelativeToParent(newOriginX / parentRect.width, newOriginY / parentRect.height);
     }
 
     getCursorStyle() {
@@ -352,11 +395,11 @@ export default class GameInterface {
      */
     setActiveChild(child) {
         this._activeChild = child;
-        for(const c of this.getAllChildren()) {
+        for (const c of this.getAllChildren()) {
             c._zIndex = this._zIndex + 1;
             c._isActive = false;
         }
-        if(child !== null) {
+        if (child !== null) {
             child._zIndex++;
             child._isActive = true;
         }
@@ -364,5 +407,5 @@ export default class GameInterface {
     }
 
 
-    
+
 }

@@ -119,6 +119,10 @@ public class EntityPathfinder {
         return currentPath;
     }
 
+    public void clearPath() {
+        this.currentPath = new ArrayList<>();
+    }
+
     private static class Node implements Comparable<Node> {
         final int x, y;
         int gCost = Integer.MAX_VALUE;
