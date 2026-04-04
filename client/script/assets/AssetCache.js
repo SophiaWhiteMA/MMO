@@ -1,6 +1,7 @@
 import manifest from './manifest.js';
 import Map from '../level/Map.js';
 import SpriteSheet from './SpriteSheet.js';
+import TextureSheet from './TextureSheet.js';
 
 const PRIVATE_KEY = Symbol('PrivateConstructorKey');
 
@@ -25,8 +26,14 @@ const fetchImage = async (url) => {
 
 export class AssetCache {
 
+    /** @type {Array<Map>} */
     #maps = []
+
+    /** @type {Map<String, SpriteSheet>} */
     #spriteSheets = {}
+
+    /** @type {Map<String, TextureSheet>} */
+    #textureSheets = []
 
 
     /**
@@ -46,10 +53,17 @@ export class AssetCache {
             this.#spriteSheets[url] = new SpriteSheet(image);
         }
 
+        for(const url of manifest.textureSheets) {
+            const image = await fetchImage(url);
+            this.#textureSheets[url] = new TextureSheet(image);
+        }
+
         for(const url of manifest.maps) {
             const newMap = await Map.fromUrl(url);
             this.#maps.push(newMap);
         }
+
+
 
     }
 
@@ -64,11 +78,20 @@ export class AssetCache {
 
     /**
      * 
-     * @param {*} url 
+     * @param {String} url 
      * @returns {SpriteSheet}
      */
     getSpriteSheetByUrl(url) {
         return this.#spriteSheets[url];
+    }
+
+    /**
+     * 
+     * @param {String} url 
+     * @returns {TextureSheet}
+     */
+    getTextureSheetByUrl(url) {
+        return this.#textureSheets[url];
     }
 
 }

@@ -1,5 +1,5 @@
 import Entity from "../../entity/Entity.js";
-import entityManager from "../../entity/EntityManager.js";
+import entityManager from '../../entity/EntityManager.js';
 import {mapRenderer} from '../../gameInterface/index.js'
 
 

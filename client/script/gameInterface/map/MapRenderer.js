@@ -1,6 +1,5 @@
 import entityManager from "../../entity/EntityManager.js";
 import Map from "../../level/Map.js";
-import { sendCommand } from "../../network/index.js";
 import Camera from "./Camera.js";
 import MapRendererConfig from "./MapRendererConfig.js";
 import GameInterface from "../GameInterface.js";
@@ -271,7 +270,7 @@ export default class MapRenderer extends GameInterface {
     /**
      * Renders every background tile that is within the bounds described by the background tile buffer to the background tile buffer
      */
-    #renderEntitiesToBuffer() {
+    #renderEntitiesToBuffer(timeMs) {
         const { x: bufferMinTileX, y: bufferMinTileY } = this.#getBufferMinTilePosition();
         const { x: bufferMaxTileX, y: bufferMaxTileY } = this.#getBufferMaxTilePosition();
         const entities = entityManager.getEntities();
@@ -283,8 +282,13 @@ export default class MapRenderer extends GameInterface {
             if (!isVisible)
                 continue;
 
-            const destinationX = Math.floor((visualX - bufferMinTileX) * this.map.tileWidth * this.config.scaleFactor);
-            const destinationY = Math.floor((visualY - bufferMinTileY) * this.map.tileHeight * this.config.scaleFactor);
+            const renderedTileWidth = this.map.tileWidth * this.config.scaleFactor;
+            const renderedTileHeight = this.map.tileHeight * this.config.scaleFactor;
+
+            const destinationX = Math.floor((visualX - bufferMinTileX) * renderedTileWidth) + renderedTileWidth / 2;
+            const destinationY = Math.floor((visualY - bufferMinTileY) * renderedTileHeight) + renderedTileHeight / 2;
+            e.animation?.onFrame(timeMs);
+            e?.animation?.mutateComponentPositions(e.animationComponent);
             e.drawToCanvasContext(this.bufferCanvasContext, destinationX, destinationY, this.config.scaleFactor);
         }
 
@@ -439,7 +443,7 @@ export default class MapRenderer extends GameInterface {
         //Prep work: clear buffer prior to re-render
         this.bufferCanvasContext.clearRect(0, 0, this.bufferCanvas.width, this.bufferCanvas.height);
         this.#renderBackgroundTiles();
-        this.#renderEntitiesToBuffer();
+        this.#renderEntitiesToBuffer(timeMs);
         this.#renderForegroundTiles();
         this.#renderTileOutlines();
         this.#renderPlayerNames();

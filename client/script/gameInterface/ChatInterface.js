@@ -1,5 +1,4 @@
 import entityManager from "../entity/EntityManager.js";
-import { sendCommand } from "../network/index.js";
 import { sendChatMessage } from "../network/outbound/chat.js";
 import WindowInterface from "./WindowInterface.js";
 

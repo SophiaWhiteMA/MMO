@@ -1,6 +1,7 @@
 import assetCache from "../assets/AssetCache.js";
-import SpriteSheet from "../assets/SpriteSheet.js";
-import Animation from "./Animation.js";
+import AnimationIdleHumanoid from "../animation/AnimationIdleHumanoid.js";
+import AnimationComponent from "../animation/AnimationComponent.js";
+import { rigGenerator } from "../animation/RigGenerator.js";
 
 function generateRandomName() {
     const adjectives = [
@@ -38,7 +39,7 @@ export default class Entity {
     movementStartTime = 0;
 
     /** @type {'NORTH' | 'SOUTH' | 'EAST' | 'WEST'} */
-    #direction = 'NORTH;'
+    _direction = 'NORTH;'
 
     /** @type {String} */
     name = generateRandomName();
@@ -46,6 +47,15 @@ export default class Entity {
     // An arbitrary data field. Used by subclasses to do things like store another player's worn equipment, their skills, etc
     /** @type {Object} */
     #metaData;
+
+    /** @type {AnimationComponent} */
+    animationComponent;
+
+    /** @type {Animation} */
+    animation;
+
+
+
 
     set metaData(metaData){
         this.#metaData = metaData;
@@ -66,6 +76,13 @@ export default class Entity {
         this.previousPosition = {...this.position};
         this.visualPosition = {...this.position};
         this.metadata = metadata;
+
+        const textureSheet = assetCache.getTextureSheetByUrl('/mmo/assets/textureSheets/human.png');
+        this.animationComponent = rigGenerator.createHumanoidRig(textureSheet);
+
+        this.animation = new AnimationIdleHumanoid();
+
+
     }
 
     /**
@@ -120,14 +137,14 @@ export default class Entity {
     }
 
     get direction(){
-        return this.#direction;
+        return this._direction;
     }
 
     set direction(d) {
         const allowedDirections = ['NORTH', 'SOUTH', 'EAST', 'WEST'];
         if(!allowedDirections.includes(d))
             throw new Error('An entity can only have NORTH, SOUTH, EAST, or WEST as a direction.');
-        this.#direction = d;
+        this._direction = d;
     }
 
     /** @returns {Animation} */
@@ -158,20 +175,6 @@ export default class Entity {
     }
 
     /**
-     * Intended to be overwritten by subclasses.
-     * @returns {{x: Number, y: Number}}
-     */
-    _getSpriteSheetCoords = () => {
-        return { x: 0, y: 0 };
-    }
-
-    //Intended to be overwritten by subclasses.
-    /** @type {SpriteSheet} */
-    get spriteSheet() {
-        return assetCache.getSpriteSheetByUrl('/mmo/assets/spritesheets/sprite_sheet.png');
-    };
-
-    /**
      * Intended to (sometimes) be overwritten by subclasses. 
      * @param {CanvasRenderingContext2D} canvasContext 
      * @param {Number} destinationX 
@@ -179,8 +182,7 @@ export default class Entity {
      * @param {Number} scaleFactor 
      */
     drawToCanvasContext = (canvasContext, destinationX, destinationY, scaleFactor) => {
-        const { x: spriteX, y: spriteY } = this._getSpriteSheetCoords();
-        this.spriteSheet.drawToCanvasContext(canvasContext, spriteX, spriteY, destinationX, destinationY, scaleFactor);
+        this.animationComponent.render(canvasContext, destinationX, destinationY, scaleFactor);
     }
 
 }

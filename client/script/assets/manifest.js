@@ -8,5 +8,8 @@ export default {
     ],
     spriteSheets: [
         '/mmo/assets/spritesheets/sprite_sheet.png'
+    ],
+    textureSheets: [
+        '/mmo/assets/textureSheets/human.png'
     ]
 }

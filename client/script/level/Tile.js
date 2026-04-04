@@ -15,10 +15,7 @@ class Tile {
      * @param {TileSet} tileSet 
      */
     constructor(localTilesetId, properties, tileSet) {
-        if(typeof tileSet === 'function') {
-            console.trace();
-            alert();
-        }
+
         this.#id = localTilesetId;
         this.#tileSet = tileSet;
         if(properties)

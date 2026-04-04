@@ -1,4 +1,4 @@
-import entityManager from "../../entity/EntityManager.js";
+import entityManager from '../../entity/EntityManager.js';
 import { chatInterface } from "../../gameInterface/index.js";
 import { ChatMessage } from "../../gameInterface/ChatInterface.js";
 
