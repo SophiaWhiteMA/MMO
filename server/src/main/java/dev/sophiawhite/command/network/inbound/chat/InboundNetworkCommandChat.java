@@ -1,5 +1,6 @@
 package dev.sophiawhite.command.network.inbound.chat;
 
+import dev.sophiawhite.chat.ChatMessage;
 import dev.sophiawhite.command.network.inbound.InboundNetworkCommand;
 import dev.sophiawhite.command.network.outbound.chat.OutboundNetworkCommandChatAdd;
 import dev.sophiawhite.entity.EntityManager;
@@ -33,10 +34,7 @@ public class InboundNetworkCommandChat extends InboundNetworkCommand {
     private void chatSend(Session session, String[] subArgs) {
         String message = String.join(" ", subArgs);
         Player author = entityManager.getPlayerBySession(session);
-        List<Player> nearbyPlayers = author.getNearbyPlayers(Player.ENTITY_TAXICAB_VIEW_RANGE);
-        for(Player p: nearbyPlayers) {
-            p.sendNetworkCommand(new OutboundNetworkCommandChatAdd(author, message));
-        }
-
+        ChatMessage chatMessage = new ChatMessage(author, message);
+        author.chat(chatMessage);
     }
 }

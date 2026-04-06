@@ -7,6 +7,7 @@ import jakarta.websocket.Session;
 
 import java.util.List;
 import java.util.ArrayList;
+import java.util.UUID;
 
 
 /**
@@ -32,99 +33,6 @@ public class EntityManager {
         return instance;
     }
 
-    /**
-     *
-     * Changes the MapInstance the provided entity is associated with and handles all necessary network side effects
-     *
-     * @param e Entity being created or reassigned to a new map instance
-     * @param mapInstance THe map instance the entity is being assigned to
-     */
-    public void assignEntityToMapInstance(Entity e, MapInstance mapInstance, EntityAddReason addReason, EntityRemoveReason removeReason) {
-        this.removeEntity(e, removeReason);
-        e.setMapInstance(mapInstance);
-        mapInstance.addEntity(e, addReason);
-    }
-
-
-    /**
-     * Changes an entity's map instance and coordinates simultaneously. If the entity is already in the
-     * same MapInstance, then that is handled as a movement with reason TELEPORT
-     *
-     * @param e Entity
-     * @param mapInstance MapInstance
-     * @param x int
-     * @param y int
-     * @param addReason EntityAddReason
-     * @param removeReason EntityRemoveReason
-     * @param moveReason EntityMoveReason
-     */
-    public void teleport(Entity e, MapInstance mapInstance, int x, int y, EntityAddReason addReason, EntityRemoveReason removeReason, EntityMovementReason moveReason) {
-
-        if(e == null )
-            throw new RuntimeException("Null Entity provided to EntityManager#teleport");
-
-        if(mapInstance == null)
-            throw new RuntimeException("Null MapInstance provided to EntityManager#teleport");
-
-        if(mapInstance != e.getMapInstance()) {
-            this.removeEntity(e, removeReason);
-            e.setPosition(x, y);
-            e.setPreviousPosition(x, y);
-            e.setMapInstance(mapInstance);
-            mapInstance.addEntity(e, addReason);
-        } else {
-           e.move(x, y, moveReason);
-        }
-        e.getEntityPathfinder().clearPath();
-    }
-
-    /**
-     * Changes an entity's map instance and coordinates simultaneously. If the entity is already in mapInstance,
-     * then that is handled as a movement with reason TELEPORT.
-     * @param e Entity being teleported
-     * @param mapInstance Destination map instance
-     * @param x New x coordinate
-     * @param y New y coordinate
-     */
-    public void teleport(Entity e, MapInstance mapInstance, int x, int y) {
-        teleport(e, mapInstance, x, y, EntityAddReason.TELEPORT, EntityRemoveReason.TELEPORT, EntityMovementReason.TELEPORT);
-    }
-
-    /**
-     * Alias for the teleport method, but with a reason of MAP_LINK
-     * @param e Entity being teleported
-     * @param mapInstance Destination map instance
-     * @param x New x coordinate
-     * @param y New y coordinate
-     */
-    public void warp(Entity e, MapInstance mapInstance, int x, int y) {
-        teleport(e, mapInstance, x, y, EntityAddReason.MAP_LINK, EntityRemoveReason.MAP_LINK, EntityMovementReason.MAP_LINK);
-    }
-
-    /**
-     *
-     * Completely de-registers an entity and broadcasts to clients that it has been removed.
-     *
-     * After this method resolves, the entity is effectively dematerialized / does not exist and can be modified
-     * freely without network effects. After being modified, the entity can be re-materialized by calling addEntity,
-     * and it's new internal state will be broadcast as normal.
-     *
-     * An example of where this is used is the teleport function. The entity's current and previous position
-     * are both changed during the dematerialization stage.
-     *
-     * @param e Entity to be removed
-     * @param reason EntityRemoveReason The underlying reason why the entity was removed from the EntityManager
-     */
-    public void removeEntity(Entity e, EntityRemoveReason reason) {
-        if(e == null)
-            return;
-
-        MapInstance mapInstance = e.getMapInstance();
-        e.setMapInstance(null);
-
-        if(mapInstance != null)
-            mapInstance.removeEntity(e, reason);
-    }
 
     /**
      * Uses linear search to locate the player with the associated session
@@ -164,5 +72,13 @@ public class EntityManager {
         return allPlayers;
     }
 
+    public Entity getEntityById(UUID uuid) {
+        if(uuid == null) return null;
+        for(Entity e: this.getAllEntities()) {
+            if(e.getUuid().equals(uuid))
+                return e;
+        }
+        return null;
+    }
 
 }

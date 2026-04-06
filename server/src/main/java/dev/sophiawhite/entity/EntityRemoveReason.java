@@ -4,6 +4,7 @@ public enum EntityRemoveReason {
 
     PLAYER_LOGOUT,
     TELEPORT,
-    MAP_LINK
+    MAP_LINK,
+    OUT_OF_RANGE,
 
 }

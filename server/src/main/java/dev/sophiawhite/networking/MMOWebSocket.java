@@ -37,7 +37,9 @@ public class MMOWebSocket {
     public void onClose(Session session) {
         synchronized(entityManager) {
             Player player = entityManager.getPlayerBySession(session);
-            entityManager.removeEntity(player, EntityRemoveReason.PLAYER_LOGOUT);
+            if(player.getLocation() != null && player.getLocation().getMapInstance() != null) {
+                player.getLocation().getMapInstance().removeEntity(player, EntityRemoveReason.PLAYER_LOGOUT);
+            }
         }
     }
 

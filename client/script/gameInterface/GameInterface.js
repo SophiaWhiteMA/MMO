@@ -3,7 +3,7 @@ import config from "../config/index.js";
 export default class GameInterface {
 
     /** @type {HTMLElement} */
-    _htmlElement = document.getElementById('root');
+    _htmlElement;
 
     /** @type {Boolean} */
     _isStale = true;
@@ -45,6 +45,7 @@ export default class GameInterface {
         this._parent = parent;
         if (parent)
             parent.addChild(this);
+        this._htmlElement = this.getHtmlElement();
         this.setPositionRelativeToParent(0, 0);
         this.registerEventListeners();
 
@@ -52,7 +53,7 @@ export default class GameInterface {
 
     registerEventListeners() {
         const htmlElement = this.getHtmlElement();
-        htmlElement.addEventListener('mousemove', (evt) => this.onMouseMove(evt));
+        window.addEventListener('mousemove', (evt) => this.onMouseMove(evt));
         htmlElement.addEventListener('mouseout', (evt) => this.onMouseLeave(evt));
         htmlElement.addEventListener('mouseover', (evt) => this.onMouseEnter(evt))
         htmlElement.addEventListener('wheel', (evt) => this.onWheel(evt));
@@ -73,10 +74,6 @@ export default class GameInterface {
         }
     }
 
-    getSize() {
-        return this._scalarSize;
-    }
-
     getPixelSize() {
         return {
             width: this.getHtmlElement().clientWidth,
@@ -88,7 +85,6 @@ export default class GameInterface {
         return this.getPixelSize().width
     }
 
-
     getPixelHeight() {
         return this.getPixelSize().height
     }
@@ -99,6 +95,10 @@ export default class GameInterface {
 
     getHeight() {
         return this.getSize().height;
+    }
+
+    getSize() {
+        return this._scalarSize;
     }
 
     setSize(scalarWidth, scalarHeight) {
@@ -281,7 +281,8 @@ export default class GameInterface {
      * @returns {HTMLElement}
      */
     getHtmlElement() {
-
+        if (!this._htmlElement)
+            this._htmlElement = document.getElementById('root');
         return this._htmlElement;
     }
 
@@ -301,8 +302,8 @@ export default class GameInterface {
         return this._zIndex;
     }
 
-    close() {
-        if (this._closeable == true) {
+    close(force) {
+        if (this._closeable == true || force) {
             this.getHtmlElement().style.visibility = 'hidden';
             const parent = this.getParent();
             if (parent)
@@ -317,9 +318,8 @@ export default class GameInterface {
 
     setPositionRelativeToParent(scalarX, scalarY) {
         const element = this.getHtmlElement();
-        if (!element)
-            return;
         const parentElement = element.parentElement;
+        
         const parentRect = parentElement.getBoundingClientRect();
         element.style.left = Math.floor(scalarX * parentRect.width) + "px";
         element.style.top = Math.floor(scalarY * parentRect.height) + "px";

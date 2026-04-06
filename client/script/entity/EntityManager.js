@@ -52,6 +52,16 @@ export class EntityManager {
         return this.#entities.find(e => e.uuid === id);
     }
 
+    /**
+     * 
+     * @param {Number} tileX 
+     * @param {Number} tileY 
+     * @returns {Array<Entity>}
+     */
+    getEntitiesAt = (tileX, tileY) => {
+        return this.#entities.filter(e => e.position.x === tileX && e.position.y === tileY);
+    }
+
 }
 
 /** @type {EntityManager} */

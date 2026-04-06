@@ -8,6 +8,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.UUID;
 import java.util.stream.Stream;
 
 public class MapInstanceManager {
@@ -74,7 +75,7 @@ public class MapInstanceManager {
      *
      * @return
      */
-    public MapInstance getMapInstanceById(String id){
+    public MapInstance getMapInstanceByMapId(String id){
         for(MapInstance mapInstance: instances) {
             if(mapInstance.getMap().getId().equals(id)) {
                 return mapInstance;
@@ -83,5 +84,12 @@ public class MapInstanceManager {
         return null;
     }
 
+    public MapInstance getMapInstanceByUuid(UUID uuid){
+        for(MapInstance mapInstance: this.instances) {
+            if(mapInstance.getUuid().equals(uuid))
+                return mapInstance;
+        }
+        return null;
+    }
 
 }

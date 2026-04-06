@@ -112,3 +112,45 @@ body {
     justify-content: space-between;
 }
 
+
+
+.right-click-menu {
+    position: absolute;
+    display: flex;
+    flex-direction: column;
+    outline: 1px solid #f0f;
+    color: white;
+    padding: 0px;
+    background-color: black;
+    box-sizing: border-box;
+    min-width: fit-content;
+    min-height: fit-content;
+    max-height: 300px;
+    max-width: 150px;
+    visibility: hidden;
+}
+
+.right-click-menu .draggable-interface-body {
+    overflow: scroll;
+    scrollbar-width: none;
+}
+
+
+.right-click-menu .active {
+    background-color: black;
+}
+
+.right-click-menu .entry {
+    color: white;
+    background-color: brown;
+    height: 40px;
+    user-select: none;
+    display: block;
+    justify-content: left;
+    align-items: center;
+}
+
+.right-click-menu .entry:hover {
+    color: white;
+    background-color: lightblue;
+}

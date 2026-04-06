@@ -2,7 +2,7 @@ export default class MapRendererConfig {
 
     mapRenderer;
 
-    #scaleFactor = 1;
+    scaleFactor = 1;
     #foregroundOpacity = 1;
 
     #useImageSmoothing = false;
@@ -20,15 +20,6 @@ export default class MapRendererConfig {
 
     constructor(mapRenderer) {
         this.mapRenderer = mapRenderer;
-    }
-
-    get scaleFactor(){
-        return this.#scaleFactor;
-    }
-
-    set scaleFactor(scaleFactor){
-        this.#scaleFactor = scaleFactor;
-        this.mapRenderer.forceCompleteRerender = true;
     }
 
     get foregroundOpacity(){

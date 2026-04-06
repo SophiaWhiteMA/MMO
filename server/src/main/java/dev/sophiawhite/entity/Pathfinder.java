@@ -4,17 +4,9 @@ import dev.sophiawhite.level.MapInstance;
 
 import java.util.*;
 
-public class EntityPathfinder {
+public class Pathfinder {
 
     private static final int PATH_ITERATION_LIMIT = 2000;
-
-    public static int unpackX(long packed){
-        return (int) (packed >> 32);
-    }
-
-    public static int unpackY(long packed) {
-        return (int) (packed & 0xFFFFFFFFL);
-    }
 
     public static long pack(int x, int y) {
         return ((long) x << 32) | (y & 0xFFFFFFFFL);

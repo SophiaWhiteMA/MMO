@@ -21,7 +21,7 @@ export class ChatMessage {
         this.authorName = author?.name ?? 'Unknown';
     }
 
-    toString(){
+    toString() {
         return `[${this.timeStamp.toLocaleTimeString()}] ${this.authorName}: ${this.content}`
     }
 
@@ -33,22 +33,21 @@ export default class ChatInterface extends WindowInterface {
 
     /** @type {Array<ChatMessage>} */
     chatMessages = [];
-
-    constructor(parent){
+    
+    constructor(parent) {
         super(parent)
+
         this.title = 'Chat';
-
-
         this.chatMessagesDiv = document.createElement('div');
         this.chatMessagesDiv.style.overflow = 'scroll';
         this.body.classList.add('chat');
         const textBox = document.createElement('input');
-       
+
         this.body.append(this.chatMessagesDiv);
         this.body.append(textBox);
-   
+
         textBox.onkeydown = (evt) => {
-            if(evt.key === 'Enter' && textBox.value.trim() !== '') {
+            if (evt.key === 'Enter' && textBox.value.trim() !== '') {
                 sendChatMessage(textBox.value);
                 textBox.value = '';
             }
@@ -61,15 +60,15 @@ export default class ChatInterface extends WindowInterface {
      * @param {ChatMessage} chatMessage 
      */
     addChatMessage(chatMessage) {
-            const msg = document.createElement('p');
-            msg.textContent = chatMessage.toString();
-            this.chatMessagesDiv.prepend(msg);
-            this.chatMessages.push(chatMessage);
-            if(this.chatMessages.length > MAX_CHAT_MESSAGES) {
-                this.chatMessages.pop();
-                const staleMessage = this.chatMessagesDiv.getElementsByTagName('p')[MAX_CHAT_MESSAGES];
-                staleMessage.remove();
-            }
+        const msg = document.createElement('p');
+        msg.textContent = chatMessage.toString();
+        this.chatMessagesDiv.prepend(msg);
+        this.chatMessages.push(chatMessage);
+        if (this.chatMessages.length > MAX_CHAT_MESSAGES) {
+            this.chatMessages.pop();
+            const staleMessage = this.chatMessagesDiv.getElementsByTagName('p')[MAX_CHAT_MESSAGES];
+            staleMessage.remove();
+        }
     }
 
 }

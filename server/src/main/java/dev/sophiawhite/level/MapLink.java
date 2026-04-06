@@ -6,7 +6,6 @@ import java.util.ArrayList;
 import java.util.List;
 
 import dev.sophiawhite.entity.*;
-import dev.sophiawhite.level.Map;
 
 public class MapLink {
 
@@ -78,7 +77,7 @@ public class MapLink {
     public MapInstance getMapInstance(){
         String target = this.propertyList.getString("target");
         MapInstanceManager mapInstanceManager = MapInstanceManager.getInstance();
-        return mapInstanceManager.getMapInstanceById(target);
+        return mapInstanceManager.getMapInstanceByMapId(target);
     }
 
     public void teleportEntity(Entity e) {
@@ -87,7 +86,7 @@ public class MapLink {
         int destinationX = this.getDestinationX();
         int destinationY = this.getDestinationY();
 
-        entityManager.teleport(e, targetMapInstance, destinationX, destinationY, EntityAddReason.MAP_LINK, EntityRemoveReason.MAP_LINK, EntityMovementReason.MAP_LINK);
+        e.teleport(new Location(destinationX, destinationY, targetMapInstance), EntityAddReason.MAP_LINK, EntityRemoveReason.MAP_LINK, EntityMovementReason.MAP_LINK);
     }
 
 }

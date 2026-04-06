@@ -2,6 +2,7 @@ package dev.sophiawhite.level;
 
 import dev.sophiawhite.command.network.outbound.entity.OutboundNetworkCommandEntityAdd;
 import dev.sophiawhite.command.network.outbound.entity.OutboundNetworkCommandEntityRemove;
+import dev.sophiawhite.command.network.outbound.map.OutboundNetworkCommandCommandMapLoad;
 import dev.sophiawhite.entity.EntityAddReason;
 import dev.sophiawhite.entity.Entity;
 import dev.sophiawhite.entity.EntityRemoveReason;
@@ -9,13 +10,16 @@ import dev.sophiawhite.entity.Player;
 
 import java.util.List;
 import java.util.ArrayList;
+import java.util.UUID;
 
 public class MapInstance {
 
     private Map map;
     private List<Entity> entities = new ArrayList<>();
+    private UUID uuid;
 
     public MapInstance(Map map) {
+        this.uuid = UUID.randomUUID();
         this.map = map;
     }
 
@@ -32,51 +36,55 @@ public class MapInstance {
 
 
     /**
-     * Adds the input entity to this MapInstance's entity list and broadcasts this change to relevant players
-     *
-     * @param e Entity
-     * @param reason EntityAddReason
-     */
-    public void addEntity(Entity e, EntityAddReason reason) {
-        this.entities.add(e);
-
-        for(Player player: this.getPlayers()) {
-            if(player.canSee(e))
-                player.sendNetworkCommand(new OutboundNetworkCommandEntityAdd(e));
-        }
-
-        if(e instanceof Player player) {
-            for(Player otherPlayer: this.getPlayers()) {
-                if(player != otherPlayer && player.canSee(otherPlayer)) {
-                    player.sendNetworkCommand(new OutboundNetworkCommandEntityAdd(otherPlayer));
-                }
-            }
-        }
-    }
-
-    /**
-     * Removes the specified entity from this instance and broadcasts this change to all players in the instance.
-     * If the entity being removed is a player, then that player is told to remove all entities on the client-side
-     * including itself.
-     * @param e Entity being removed
-     * @param reason Why the entity was removed
+     * Remove an entity from this map instance's internal list of entities and broadcast the necessary network side effects.
+     * We assume that the entity has NOT yet had its location or map instance modified/nullified via Entity#setLocation
+     * or Entity#setMapInstance prior to this method being invoked. This method is the first to be called when
+     * moving an entity to a new instance or removing it outright.
+     * @param e Entity being added
+     * @param reason Why was the entity added? Player login, teleport, etc.
      */
     public void removeEntity(Entity e, EntityRemoveReason reason) {
 
         for(Player player: this.getPlayers()) {
             if(player.canSee(e) && e != player)
-                player.sendNetworkCommand(new OutboundNetworkCommandEntityRemove(e));
+                player.sendNetworkCommand(new OutboundNetworkCommandEntityRemove(e, reason));
         }
 
         if(e instanceof Player player) {
             for(Entity e2: this.getEntities()) {
                 if(player.canSee(e2))
-                    player.sendNetworkCommand(new OutboundNetworkCommandEntityRemove(e2));
+                    player.sendNetworkCommand(new OutboundNetworkCommandEntityRemove(e2, reason));
 
             }
         }
 
         this.entities.remove(e);
+    }
+
+    /**
+     * Add an entity to this map instance's internal list of entities and broadcast the necessary network side effects.
+     * We assume that the entity has the correct location and mapInstance set via Entity#setLocation and
+     * Entity#setMapInstance prior to this method being invoked. This method is the first to be last when
+     * moving an entity to a new instance or adding it for the first time.
+     * @param e Entity being added
+     * @param reason Why was the entity added? Player login, teleport, etc.
+     */
+    public void addEntity(Entity e, EntityAddReason reason){
+        this.entities.add(e);
+
+        List<Entity> destinationEntities = e.getEntitiesInTaxicabRange(Player.ENTITY_TAXICAB_VIEW_RANGE);
+        List<Player> destinationPlayers = e.getPlayersInTaxicabRange(Player.ENTITY_TAXICAB_VIEW_RANGE);
+        for(Player p: destinationPlayers.stream().filter(p -> p.canSee(e) && p != e).toList()) {
+            p.sendNetworkCommand(new OutboundNetworkCommandEntityAdd(e, EntityAddReason.PLAYER_LOGIN));
+        }
+
+        if(e instanceof Player player) {
+            player.sendNetworkCommand(new OutboundNetworkCommandCommandMapLoad(this.getMap()));
+            for(Entity e2: destinationEntities) {
+                player.sendNetworkCommand(new OutboundNetworkCommandEntityAdd(e2, EntityAddReason.WALK_IN_RANGE));
+            }
+        }
+
     }
 
     public List<MapLink> getMapLinks(){
@@ -97,12 +105,6 @@ public class MapInstance {
         return output;
     }
 
-
-    public Tile getTile(int x, int y, int z) {
-        return this.map.getTile(x, y, z);
-    }
-
-
     public boolean isObstructedAt(int x, int y){
         List<MapTileLayer> mapTileLayers = this.map.getLayers();
         for(int z = 0; z < mapTileLayers.size(); z++) {
@@ -120,6 +122,10 @@ public class MapInstance {
 
     public MapLink getMapLinkAt(int tileX, int tileY) {
         return this.map.getMapLinkAt(tileX, tileY);
+    }
+
+    public UUID getUuid(){
+        return this.uuid;
     }
 
 }

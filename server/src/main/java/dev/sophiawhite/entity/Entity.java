@@ -3,7 +3,11 @@ package dev.sophiawhite.entity;
 import dev.sophiawhite.command.network.outbound.entity.OutboundNetworkCommandEntityAdd;
 import dev.sophiawhite.command.network.outbound.entity.OutboundNetworkCommandEntityMove;
 import dev.sophiawhite.command.network.outbound.entity.OutboundNetworkCommandEntityRemove;
+import dev.sophiawhite.level.Location;
 import dev.sophiawhite.level.MapInstance;
+import dev.sophiawhite.logging.LogLevel;
+import dev.sophiawhite.logging.Logger;
+import org.jetbrains.annotations.Nullable;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -11,18 +15,15 @@ import java.util.UUID;
 
 public abstract class Entity {
 
-    private MapInstance mapInstance;
-    private int x = 0;
-    private int y = 0;
-    private int previousX = 0;
-    private int previousY = 0;
-
+    private Location location;
+    private Location previousLocation;
     private final UUID uuid;
 
     private static final int PATH_ITERATION_LIMIT = 2000;
-    private List<int[]> currentPath = new ArrayList<>();
+    private static final Logger logger = Logger.getInstance();
 
-    private EntityPathfinder entityPathfinder = new EntityPathfinder();
+
+    private final Pathfinder pathfinder = new Pathfinder();
 
     /**
      * The client differentiates entity types using this field. Conventionally, the name defined by subclasses
@@ -33,26 +34,10 @@ public abstract class Entity {
 
     public Entity(){
         this.uuid = UUID.randomUUID();
+        this.location = new Location();
     }
 
-    /**
-     * WARNING: This class is not intended to be invoked outside the EntityManager class.
-     * Set this entity's associated MapInstance.
-     * @param mapInstance
-     */
-    public void setMapInstance(MapInstance mapInstance) {
-        this.mapInstance = mapInstance;
-    }
-
-    /**
-     *
-     * @return The MapInstance this entity is a member of.
-     */
-    public MapInstance getMapInstance(){
-        return this.mapInstance;
-    }
-
-    public UUID getUUID(){
+    public UUID getUuid(){
         return this.uuid;
     }
 
@@ -63,111 +48,100 @@ public abstract class Entity {
      * @param y
      */
     public void move(int x, int y, EntityMovementReason reason) {
-        this.setPreviousPosition(this.x, this.y);
-        this.x = x;
-        this.y = y;
 
-        for(Player p: this.getMapInstance().getPlayers()) {
+        if(this.location == null || this.location.getMapInstance() == null)
+            return;
+
+        this.previousLocation = this.location.clone();
+        this.location.setCoordinates(x, y);
+
+        for(Player p: this.location.getMapInstance().getPlayers()) {
 
             boolean canPlayerSeeNow = p.canSee(this);
             boolean couldPlayerSeePreviously = p.canSee(this, true);
 
             if(couldPlayerSeePreviously && canPlayerSeeNow) {
-                p.sendNetworkCommand(new OutboundNetworkCommandEntityMove(this, this.x, this.y));
+                p.sendNetworkCommand(new OutboundNetworkCommandEntityMove(this, this.location.getX(), this.location.getY()));
             }
 
             if(couldPlayerSeePreviously && !canPlayerSeeNow) {
-                p.sendNetworkCommand(new OutboundNetworkCommandEntityRemove(this));
+                p.sendNetworkCommand(new OutboundNetworkCommandEntityRemove(this, EntityRemoveReason.OUT_OF_RANGE));
                 if(this instanceof Player player)
-                    player.sendNetworkCommand(new OutboundNetworkCommandEntityRemove(p));
+                    player.sendNetworkCommand(new OutboundNetworkCommandEntityRemove(p, EntityRemoveReason.OUT_OF_RANGE));
             }
 
             if (!couldPlayerSeePreviously && canPlayerSeeNow) {
-                p.sendNetworkCommand(new OutboundNetworkCommandEntityAdd(this));
+                p.sendNetworkCommand(new OutboundNetworkCommandEntityAdd(this, EntityAddReason.WALK_IN_RANGE));
                 if(this instanceof Player player)
-                    player.sendNetworkCommand(new OutboundNetworkCommandEntityAdd(p));
+                    player.sendNetworkCommand(new OutboundNetworkCommandEntityAdd(p, EntityAddReason.WALK_IN_RANGE));
             }
-
-
 
         }
     }
 
     /**
+     * Entity's position is mutated and this change is broadcast to relevant players.
+     * Internally, the entity's previous position is also updated.
+     * @param loc Location
+     * @param reason EntityMovementReason
+     */
+    public void move(Location loc, EntityMovementReason reason){
+        this.move(loc.getX(), loc.getY(), reason);
+    }
+
+    /**
      * Sets the entity's position WITHOUT network side effects. This method should be rarely used and only in
      * controlled settings.
-     * @param x
-     * @param y
+     * @param loc Location
      */
-    public void setPosition(int x, int y) {
-        this.x = x;
-        this.y = y;
+    public void setLocation(@Nullable Location loc) {
+        this.location = loc;
     }
 
-    /**
-     *
-     * @return The entity's current X coordinate
-     */
-    public int getX(){
-        return this.x;
-    }
 
-    public int getPreviousX(){
-        return this.previousX;
-    }
-
-    public int getPreviousY(){
-        return this.previousY;
-    }
-
-    /**
-     *
-     * @return THe entity's current Y coordinate
-     */
-    public int getY(){
-        return this.y;
+    @Nullable
+    public Location getLocation(){
+        return this.location;
     }
 
     /**
      * WARNING: The entity's previous position is managed nearly exclusively by this class
-     * @param x
-     * @param y
+     * @param loc Location
      */
-    public void setPreviousPosition(int x, int y) {
-        this.previousX = x;
-        this.previousY = y;
+    public void setPreviousLocation(Location loc) {
+        this.previousLocation = loc;
     }
 
-    public int getTaxicabDistance(int x, int y) {
-        return Math.abs(x - this.x) + Math.abs(this.y - y);
+    public Location getPreviousLocation(){
+        return this.previousLocation;
     }
 
-    public int getTaxicabDistance(Entity e) {
-        return this.getTaxicabDistance(e.getX(), e.getY());
+    public List<Entity> getEntitiesInTaxicabRange(int maxTaxicabDistance){
+        if(this.location != null && this.location.getMapInstance() != null) {
+            return this.location.getMapInstance().getEntities().stream()
+                    .filter(e -> e.getLocation() != null)
+                    .filter(e -> e.getLocation().getTaxicabDistance(this.location) <= Player.ENTITY_TAXICAB_VIEW_RANGE).toList();
+        }
+        return new ArrayList<Entity>();
     }
 
-    public List<Entity> getNearbyEntities(int maxTaxicabDistance){
-        return this.mapInstance.getEntities().stream().filter(e -> {
-            return this.getTaxicabDistance(e) <= maxTaxicabDistance;
-        }).toList();
-    }
-
-    public List<Player> getNearbyPlayers(int maxTaxicabDistance) {
-        return this.getNearbyEntities(maxTaxicabDistance).stream().filter(e -> {
+    public List<Player> getPlayersInTaxicabRange(int maxTaxicabDistance) {
+        return this.getEntitiesInTaxicabRange(maxTaxicabDistance).stream().filter(e -> {
             return e instanceof Player;
         }).map(e -> (Player) e).toList();
     }
 
-    public EntityPathfinder getEntityPathfinder() {
-        return entityPathfinder;
+    public Pathfinder getPathfinder() {
+        return pathfinder;
     }
 
     public void beginPathfinding(int destinationX, int destinationY){
-        this.entityPathfinder.beginPathfinding(this.mapInstance, this.x, this.y, destinationX, destinationY);
+        MapInstance mapInstance = this.getLocation() == null ? null : this.getLocation().getMapInstance();
+        this.pathfinder.beginPathfinding(mapInstance, this.location.getX(), this.location.getY(), destinationX, destinationY);
     }
 
     public void tick(){
-        List<int[]> currentPath = this.entityPathfinder.getCurrentPath();
+        List<int[]> currentPath = this.pathfinder.getCurrentPath();
         if(currentPath == null || currentPath.isEmpty())
             return;
         int[] coordinates = currentPath.removeFirst();
@@ -186,5 +160,48 @@ public abstract class Entity {
         return true;
     }
 
+    public void teleport(Location destination, EntityAddReason addReason, EntityRemoveReason removeReason, EntityMovementReason moveReason) {
+
+        if(destination == null) {
+            logger.log(LogLevel.ERROR, String.format("Null teleport destination provided for entity %s", this.getUuid()));
+            return;
+        }
+
+        MapInstance destinationInstance = destination.getMapInstance();
+        if(destinationInstance == null) {
+            logger.log(LogLevel.ERROR, String.format("Invalid teleport destination for entity %s. Target destination is in null instance at (%s, %s)", this.getUuid(), destination.getX(), destination.getY()));
+            return;
+        }
+
+        Location startLocation = this.getLocation();
+        MapInstance startInstance = startLocation == null ? null : startLocation.getMapInstance();
+
+        if(startInstance == destinationInstance) {
+            this.move(destination.getX(), destination.getY(), moveReason);
+            this.getPathfinder().clearPath();
+            return;
+        }
+
+        if(startInstance != null) {
+            startInstance.removeEntity(this, EntityRemoveReason.TELEPORT);
+        }
+
+        this.setPreviousLocation(startLocation == null ? null : startLocation.clone());
+        this.setLocation(destination.clone());
+
+        destinationInstance.addEntity(this, EntityAddReason.TELEPORT);
+
+
+        this.pathfinder.clearPath();
+
+    }
+
+    public void teleport(Location location) {
+        teleport(location, EntityAddReason.TELEPORT, EntityRemoveReason.TELEPORT, EntityMovementReason.TELEPORT);
+    }
+
+    public void warp(Location location) {
+        teleport(location, EntityAddReason.MAP_LINK, EntityRemoveReason.MAP_LINK, EntityMovementReason.MAP_LINK);
+    }
 
 }

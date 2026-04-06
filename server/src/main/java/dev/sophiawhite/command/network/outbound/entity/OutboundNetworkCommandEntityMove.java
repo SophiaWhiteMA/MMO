@@ -17,7 +17,7 @@ public class OutboundNetworkCommandEntityMove implements OutboundNetworkCommand 
 
     @Override
     public String toString(){
-        return String.format("entity move %s %s %s", this.entity.getUUID().toString(), this.x, this.y);
+        return String.format("entity move %s %s %s", this.entity.getUuid().toString(), this.x, this.y);
     }
 
 }

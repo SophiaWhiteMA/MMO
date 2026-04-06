@@ -13,7 +13,7 @@ public class CommandEntitySetPlayer implements OutboundNetworkCommand {
 
     @Override
     public String toString(){
-        return String.format("entity setplayer %s", this.player.getUUID().toString());
+        return String.format("entity setplayer %s", this.player.getUuid().toString());
     }
 
 }

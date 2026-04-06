@@ -3,7 +3,7 @@ import Map from "../../level/Map.js";
 import Camera from "./Camera.js";
 import MapRendererConfig from "./MapRendererConfig.js";
 import GameInterface from "../GameInterface.js";
-import { chatInterface } from "../index.js";
+import { chatInterface, rightClickMenu } from "../index.js";
 import { move as playerMove} from "../../network/outbound/player.js";
 
 
@@ -472,6 +472,7 @@ export default class MapRenderer extends GameInterface {
      * @param {PointerEvent} evt 
      */
     onMouseClick(evt) {
+
         super.onMouseClick(evt);
         this.getParent().setActiveChild(this);
 
@@ -491,6 +492,13 @@ export default class MapRenderer extends GameInterface {
         const tileY = Math.floor(this.camera.y + deltaTileY);
 
         playerMove(tileX, tileY);
+    }
+
+    onMouseMove(evt){
+        super.onMouseMove(evt);
+        if(evt.target != this.getHtmlElement())
+            return;
+        rightClickMenu.close();
     }
 
     /**
@@ -515,6 +523,32 @@ export default class MapRenderer extends GameInterface {
      * @param {PointerEvent} evt 
      */
     onContextMenu(evt) {
+
+        super.onMouseClick(evt);
+        this.getParent().setActiveChild(this);
+
+        const cameraPixelX = this.viewportCanvas.width / 2;
+        const cameraPixelY = this.viewportCanvas.height / 2;
+
+        const deltaPixelX = this._mouseX - cameraPixelX;
+        const deltaPixelY = this._mouseY - cameraPixelY;
+
+        const renderedTileWidth = this.map.tileWidth * this.config.scaleFactor;
+        const renderedTileHeight = this.map.tileHeight * this.config.scaleFactor;
+
+        const deltaTileX = deltaPixelX / renderedTileWidth;
+        const deltaTileY = deltaPixelY / renderedTileHeight;
+
+        const tileX = Math.floor(this.camera.x + deltaTileX);
+        const tileY = Math.floor(this.camera.y + deltaTileY);
+
+        //TODO: use tile x...
+
+        const rect = this.getHtmlElement().getBoundingClientRect();
+
+        rightClickMenu.setPositionRelativeToParent((evt.x - 15 ) / rect.width , (evt.y - 15) / rect.height ); 
+        rightClickMenu.open(tileX, tileY);
+
         evt.preventDefault();
     }
 
